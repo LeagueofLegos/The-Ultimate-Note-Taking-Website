@@ -27,23 +27,55 @@
             align-items: center;
             border-bottom: 2px solid var(--panel-color);
             padding-bottom: 15px;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
 
         h1 { margin: 0; font-size: 24px; letter-spacing: 1px; }
 
+        .nav-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+
+        .nav-link {
+            cursor: pointer;
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+        .nav-link:hover { text-decoration: underline; }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Buttons turned into sleek interactive squares */
         .btn {
-            background-color: var(--accent-color);
+            background-color: var(--panel-color);
             color: white;
-            border: none;
+            border: 2px solid #2a2a30;
             padding: 10px 16px;
             font-weight: bold;
             border-radius: 4px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
-
-        .btn:hover { background-color: #e03e4b; }
+        .btn:hover { 
+            border-color: var(--accent-color);
+            background-color: #222226;
+        }
+        .btn-main {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        .btn-main:hover {
+            background-color: #e03e4b;
+            border-color: #e03e4b;
+        }
 
         /* The Big Squares Grid */
         .grid {
@@ -52,6 +84,7 @@
             gap: 20px;
         }
 
+        /* Standard clickable directory buttons */
         .grid-item {
             background-color: var(--panel-color);
             border: 2px solid #2a2a30;
@@ -62,23 +95,27 @@
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            transition: transform 0.1s, border-color 0.2s;
+            transition: transform 0.1s, border-color 0.2s, background-color 0.2s;
             padding: 15px;
             text-align: center;
+            user-select: none;
         }
 
         .grid-item:hover {
             transform: translateY(-2px);
             border-color: var(--accent-color);
+            background-color: #1f1f24;
         }
 
-        .folder-icon {
+        .icon {
             font-size: 48px;
             margin-bottom: 10px;
-            color: #f4b400;
         }
+        .folder-icon { color: #f4b400; }
+        .md-icon { color: #4ba3ff; }
+        .table-icon { color: #2ecc71; }
 
-        .folder-name {
+        .item-name {
             font-weight: 600;
             font-size: 16px;
         }
@@ -87,64 +124,147 @@
 <body>
 
     <header>
-        <h1>ULTIMATE NOTES // <span id="current-folder-title">Root</span></h1>
-        <button class="btn" onclick="createNewFolder()">+ New Folder</button>
+        <h1>ULTIMATE NOTES</h1>
+        <div class="controls">
+            <button class="btn btn-main" onclick="createNewItem('folder')">+ New Folder</button>
+            <button class="btn" onclick="createNewItem('markdown')">+ New Markdown</button>
+            <button class="btn" onclick="createNewItem('table')">+ New Grid Table</button>
+        </div>
     </header>
 
+    <!-- Path history tracking breadcrumbs -->
+    <div class="nav-bar" id="breadcrumbs"></div>
+
+    <!-- The directory structure layout -->
     <main class="grid" id="folder-grid"></main>
 
     <script>
-        // Initialize app data structure from localStorage, or start empty
+        // Master Data Model setup
         let appData = JSON.parse(localStorage.getItem('ultimate_notes_data')) || {
-            folders: []
+            notebooks: {
+                id: 'root',
+                name: 'Root',
+                type: 'folder',
+                children: []
+            }
         };
 
-        // Function to save the data back to the browser
+        // Navigation history tracking (Stack array containing folder references)
+        let navigationHistory = [appData.notebooks];
+
         function saveData() {
             localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
         }
 
-        // Function to prompt user and create a folder
-        function createNewFolder() {
-            const folderName = prompt("Enter folder name (e.g., Street Fighter 6, Tekken 8):");
-            if (!folderName || folderName.trim() === "") return;
+        // Helper function to fetch the directory pointer we are currently looking at
+        function getCurrentFolder() {
+            return navigationHistory[navigationHistory.length - 1];
+        }
 
-            const newFolder = {
-                id: 'folder_' + Date.now(),
-                name: folderName.trim()
+        // Handles creation logic for all 3 major file types
+        function createNewItem(type) {
+            const currentFolder = getCurrentFolder();
+            let promptMsg = "Enter folder name:";
+            if (type === 'markdown') promptMsg = "Enter Markdown file name (e.g., Frame Data Notes):";
+            if (type === 'table') promptMsg = "Enter Table file name (e.g., Matchup Chart):";
+
+            const name = prompt(promptMsg);
+            if (!name || name.trim() === "") return;
+
+            const newItem = {
+                id: type + '_' + Date.now(),
+                name: name.trim(),
+                type: type
             };
 
-            appData.folders.push(newFolder);
+            // If it's a folder, it needs its own space for internal items
+            if (type === 'folder') {
+                newItem.children = [];
+            } else if (type === 'markdown') {
+                newItem.content = "# " + newItem.name + "\nWrite your fighting game notes here...";
+            } else if (type === 'table') {
+                newItem.content = { headers: ["Situation", "Option A", "Option B"], rows: [["Neutral", "", ""]] };
+            }
+
+            currentFolder.children.push(newItem);
             saveData();
             renderGrid();
         }
 
-        // Function to turn data into the "Big Squares" on screen
+        // Navigate deeper inside a folder directory
+        function enterFolder(folder) {
+            navigationHistory.push(folder);
+            renderGrid();
+        }
+
+        // Navigate backwards through path history links
+        function navigateTo(index) {
+            navigationHistory = navigationHistory.slice(0, index + 1);
+            renderGrid();
+        }
+
+        function renderBreadcrumbs() {
+            const container = document.getElementById('breadcrumbs');
+            container.innerHTML = '';
+            
+            navigationHistory.forEach((folder, index) => {
+                const isLast = index === navigationHistory.length - 1;
+                if (index > 0) {
+                    container.appendChild(document.createTextNode(' / '));
+                }
+                
+                const span = document.createElement('span');
+                span.textContent = folder.name;
+                if (!isLast) {
+                    span.className = 'nav-link';
+                    span.onclick = () => navigateTo(index);
+                }
+                container.appendChild(span);
+            });
+        }
+
         function renderGrid() {
             const grid = document.getElementById('folder-grid');
-            grid.innerHTML = ''; // Clear existing visual elements
+            grid.innerHTML = ''; 
+            renderBreadcrumbs();
 
-            if (appData.folders.length === 0) {
-                grid.innerHTML = `<p style="color: var(--text-dim);">No folders yet. Click '+ New Folder' to get started!</p>`;
+            const currentFolder = getCurrentFolder();
+
+            if (!currentFolder.children || currentFolder.children.length === 0) {
+                grid.innerHTML = `<p style="color: var(--text-dim);">This space is empty. Use the control buttons above to create content inside.</p>`;
                 return;
             }
 
-            appData.folders.forEach(folder => {
-                // Create the element for the big square
+            currentFolder.children.forEach(item => {
                 const square = document.createElement('div');
                 square.className = 'grid-item';
-                square.onclick = () => alert(`Entering ${folder.name} (Note editing coming next!)`);
 
-                square.innerHTML = `
-                    <div class="folder-icon">📁</div>
-                    <div class="folder-name">${folder.name}</div>
-                `;
+                // Set up visual styles and actions depending on file type archetype
+                if (item.type === 'folder') {
+                    square.onclick = () => enterFolder(item);
+                    square.innerHTML = `
+                        <div class="icon folder-icon">📁</div>
+                        <div class="item-name">${item.name}</div>
+                    `;
+                } else if (item.type === 'markdown') {
+                    square.onclick = () => alert(`Opening Markdown Editor for: ${item.name}\n(Editor view phase coming up next!)`);
+                    square.innerHTML = `
+                        <div class="icon md-icon">📝</div>
+                        <div class="item-name">${item.name}</div>
+                    `;
+                } else if (item.type === 'table') {
+                    square.onclick = () => alert(`Opening Grid Table view for: ${item.name}`);
+                    square.innerHTML = `
+                        <div class="icon table-icon">📊</div>
+                        <div class="item-name">${item.name}</div>
+                    `;
+                }
 
                 grid.appendChild(square);
             });
         }
 
-        // Initial render when loading the page
+        // Initial setup execution
         renderGrid();
     </script>
 </body>
