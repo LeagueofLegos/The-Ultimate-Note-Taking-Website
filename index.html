@@ -12,6 +12,7 @@
             --text-color: #ffffff;
             --text-dim: #a0a0a5;
             --danger-color: #e74c3c;
+            --move-color: #3498db;
         }
 
         body {
@@ -22,7 +23,6 @@
             padding: 20px;
         }
 
-        /* Views management toggle */
         .view-section { display: block; }
         .hidden { display: none !important; }
 
@@ -82,6 +82,23 @@
             border-color: #e03e4b;
         }
         .btn-utility { border-color: #444; color: var(--text-dim); }
+        
+        /* High-visibility active paste button state */
+        .btn-paste {
+            background-color: var(--move-color);
+            border-color: var(--move-color);
+            animation: pulse 2s infinite;
+        }
+        .btn-paste:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(52, 152, 219, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
+        }
 
         .grid {
             display: grid;
@@ -89,7 +106,6 @@
             gap: 20px;
         }
 
-        /* Container box with relative positioning for card deletion buttons */
         .card-container {
             position: relative;
             aspect-ratio: 1 / 1;
@@ -121,12 +137,19 @@
             background-color: #1f1f24;
         }
 
+        /* Gray out a card when it's actively holding the cut state */
+        .grid-item.moving {
+            opacity: 0.4;
+            border-style: dashed;
+            border-color: var(--move-color);
+        }
+
         .icon { font-size: 48px; margin-bottom: 10px; }
         .folder-icon { color: #f4b400; }
         .file-icon { color: #4ba3ff; }
         .item-name { font-weight: 600; font-size: 16px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        /* Delete button built right into the card UI */
+        /* Action overlays on top of the card boxes */
         .btn-delete {
             position: absolute;
             top: 8px;
@@ -150,7 +173,29 @@
             border-color: var(--danger-color);
         }
 
-        /* Split-screen layout style rules for Workspace Text Editor */
+        .btn-move {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #333;
+            color: #888;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .btn-move:hover {
+            background-color: var(--move-color);
+            color: white;
+            border-color: var(--move-color);
+        }
+
         .editor-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -199,6 +244,7 @@
                 <input type="file" id="import-file" style="display: none;" onchange="importMetadata(this)">
                 <button class="btn btn-utility" onclick="document.getElementById('import-file').click()">Import Data</button>
                 
+                <button class="btn btn-paste" id="btn-paste" onclick="pasteItem()" style="display: none;">📋 Paste Here</button>
                 <button class="btn btn-main" id="btn-folder" onclick="createNewItem('folder')">+ New Folder</button>
                 <button class="btn" id="btn-file" onclick="createNewItem('file')" style="display: none;">+ New File</button>
             </div>
@@ -218,7 +264,7 @@
         </header>
         
         <div class="editor-container">
-            <textarea id="markdown-input" class="editor-pane" placeholder="Type Markdown here... (e.g. # Combo Guide \n - 5HP -> 236KK)" oninput="updateLivePreview()"></textarea>
+            <textarea id="markdown-input" class="editor-pane" placeholder="Type Markdown here..." oninput="updateLivePreview()"></textarea>
             <div id="markdown-preview" class="preview-pane"></div>
         </div>
     </div>
@@ -227,7 +273,11 @@
     <script>
         let rawData = localStorage.getItem('ultimate_notes_data');
         let appData;
-        let activeFilePointer = null; // References the note object actively loaded inside workspace
+        let activeFilePointer = null; 
+        
+        // Tracking state variables for the clipboard system
+        let movingItemPointer = null; 
+        let movingItemParentArrayRef = null; 
 
         try {
             let parsed = JSON.parse(rawData);
@@ -281,20 +331,87 @@
             renderGrid();
         }
 
-        // Deletes target file/folder from child container array
         function deleteItem(itemId, event) {
-            event.stopPropagation(); // Prevents Vimium target click or directory entry activation from firing
-            
+            event.stopPropagation(); 
             if (!confirm("Are you sure you want to delete this item?")) return;
 
             const currentFolder = getCurrentFolder();
             currentFolder.children = currentFolder.children.filter(item => item.id !== itemId);
             
+            // Clear moving reference if the cut item gets deleted directly
+            if (movingItemPointer && movingItemPointer.id === itemId) {
+                cancelMove();
+            }
+
             saveData();
             renderGrid();
         }
 
-        // Activates custom Markdown Workspace UI view layout
+        // Stores target item and its directory source location into memory
+        function startMoveItem(item, event) {
+            event.stopPropagation();
+            movingItemPointer = item;
+            movingItemParentArrayRef = getCurrentFolder().children;
+            renderGrid();
+        }
+
+        // Commits moving item to target active folder array structure
+        function pasteItem() {
+            if (!movingItemPointer) return;
+
+            const targetFolder = getCurrentFolder();
+
+            // Self-nesting prevention check rule
+            if (movingItemPointer.id === targetFolder.id) {
+                alert("Error: You can't paste a folder inside itself!");
+                cancelMove();
+                return;
+            }
+
+            // Descendant nesting validation helper check
+            if (isDescendant(movingItemPointer, targetFolder)) {
+                alert("Error: You cannot move a parent folder inside one of its own sub-folders!");
+                cancelMove();
+                return;
+            }
+
+            // Remove from original directory array container mapping
+            const index = movingItemParentArrayRef.indexOf(movingItemPointer);
+            if (index > -1) {
+                movingItemParentArrayRef.splice(index, 1);
+            }
+
+            // Inject into target directory container setup mapping
+            if (!targetFolder.children) targetFolder.children = [];
+            targetFolder.children.push(movingItemPointer);
+
+            // Clean tracking state allocations
+            movingItemPointer = null;
+            movingItemParentArrayRef = null;
+
+            saveData();
+            renderGrid();
+        }
+
+        // Recursively ensures deep structural loops are mathematically impossible
+        function isDescendant(parentFolder, targetFolder) {
+            if (parentFolder.type !== 'folder' || !parentFolder.children) return false;
+            
+            for (let child of parentFolder.children) {
+                if (child.id === targetFolder.id) return true;
+                if (child.type === 'folder') {
+                    if (isDescendant(child, targetFolder)) return true;
+                }
+            }
+            return false;
+        }
+
+        function cancelMove() {
+            movingItemPointer = null;
+            movingItemParentArrayRef = null;
+            renderGrid();
+        }
+
         function openEditor(fileItem) {
             activeFilePointer = fileItem;
             document.getElementById('editor-file-title').textContent = `EDITING // ${fileItem.name}`;
@@ -316,27 +433,22 @@
             renderGrid();
         }
 
-        // Simple built-in parser converting basic markdown syntax variations natively
         function updateLivePreview() {
             const rawText = document.getElementById('markdown-input').value;
             const previewPane = document.getElementById('markdown-preview');
             
-            // Clean/escape base HTML to prevent template execution issues
             let html = rawText
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;");
 
-            // Process headers, list items, and line breaks natively
             html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
             html = html.replace(/^## (.*$)/gim, '<h2>$2</h2>');
             html = html.replace(/^\s*-\s*(.*$)/gim, '<li>$1</li>');
             html = html.replace(/^\s*\*\s*(.*$)/gim, '<li>$1</li>');
             html = html.replace(/\n/g, '<br>');
 
-            // Wrap list element tag layers cleanly if elements are present
             if (html.includes('<li>')) {
-                // Approximate grouping fix for basic previews
                 html = html.replace(/(<li>.*<\/li>)/gim, '<ul>$1</ul>');
             }
 
@@ -357,6 +469,7 @@
             const currentFolder = getCurrentFolder();
             const fileBtn = document.getElementById('btn-file');
             const folderBtn = document.getElementById('btn-folder');
+            const pasteBtn = document.getElementById('btn-paste');
 
             if (currentFolder.id === 'root') {
                 fileBtn.style.display = 'none';
@@ -364,6 +477,13 @@
             } else {
                 fileBtn.style.display = 'inline-block';
                 folderBtn.textContent = '+ New Sub-Folder';
+            }
+
+            // Toggle global paste capability button rendering visibility
+            if (movingItemPointer) {
+                pasteBtn.style.display = 'inline-block';
+            } else {
+                pasteBtn.style.display = 'none';
             }
         }
 
@@ -388,6 +508,7 @@
                     if (parsedData.notebooks && parsedData.notebooks.id === 'root') {
                         appData = parsedData;
                         navigationHistory = [appData.notebooks];
+                        cancelMove(); // Wipe old tracking clipboard data maps
                         saveData();
                         renderGrid();
                         alert("Metadata imported successfully!");
@@ -444,13 +565,25 @@
 
                 const square = document.createElement('button');
                 square.className = 'grid-item';
+                
+                // Highlight item if it's currently selected to be moved
+                if (movingItemPointer && movingItemPointer.id === item.id) {
+                    square.classList.add('moving');
+                }
 
-                // Explicit delete button overlaying the card element framework
+                // Delete overlay button setup
                 const delBtn = document.createElement('button');
                 delBtn.className = 'btn-delete';
                 delBtn.innerHTML = '✕';
                 delBtn.title = 'Delete';
                 delBtn.onclick = (e) => deleteItem(item.id, e);
+
+                // Semantic Move overlay button setup
+                const moveBtn = document.createElement('button');
+                moveBtn.className = 'btn-move';
+                moveBtn.innerHTML = '⤳';
+                moveBtn.title = 'Move';
+                moveBtn.onclick = (e) => startMoveItem(item, e);
 
                 if (item.type === 'folder') {
                     square.onclick = () => enterFolder(item);
@@ -468,6 +601,7 @@
 
                 wrapper.appendChild(square);
                 wrapper.appendChild(delBtn);
+                wrapper.appendChild(moveBtn);
                 grid.appendChild(wrapper);
             });
         }
