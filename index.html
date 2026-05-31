@@ -132,9 +132,25 @@
     <main class="grid" id="folder-grid"></main>
 
     <script>
-        let appData = JSON.parse(localStorage.getItem('ultimate_notes_data')) || {
-            notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] }
-        };
+        // Safety Check: Pull data from storage
+        let rawData = localStorage.getItem('ultimate_notes_data');
+        let appData;
+
+        try {
+            let parsed = JSON.parse(rawData);
+            // If the structure doesn't match our new nested framework, force a reset
+            if (parsed && parsed.notebooks && parsed.notebooks.id === 'root') {
+                appData = parsed;
+            } else {
+                throw new Error("Old structure detected");
+            }
+        } catch(e) {
+            // Initialize fresh layout
+            appData = {
+                notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] }
+            };
+            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
+        }
 
         let navigationHistory = [appData.notebooks];
 
@@ -226,11 +242,11 @@
                         alert("Invalid backup file structure.");
                     }
                 } catch (err) {
-                    alert("Error reading file. Make sure it's a valid JSON backup.");
+                    alert("Error reading file.");
                 }
             };
             reader.readAsText(file);
-            input.value = ''; // Reset input element
+            input.value = '';
         }
 
         function renderBreadcrumbs() {
