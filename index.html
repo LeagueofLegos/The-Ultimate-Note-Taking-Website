@@ -11,6 +11,7 @@
             --accent-color: #ff4655;
             --text-color: #ffffff;
             --text-dim: #a0a0a5;
+            --danger-color: #e74c3c;
         }
 
         body {
@@ -20,6 +21,10 @@
             margin: 0;
             padding: 20px;
         }
+
+        /* Views management toggle */
+        .view-section { display: block; }
+        .hidden { display: none !important; }
 
         header {
             display: flex;
@@ -52,10 +57,7 @@
         }
         .nav-link:hover { text-decoration: underline; }
 
-        .controls {
-            display: flex;
-            gap: 10px;
-        }
+        .controls { display: flex; gap: 10px; }
 
         .btn {
             background-color: var(--panel-color);
@@ -79,10 +81,7 @@
             background-color: #e03e4b;
             border-color: #e03e4b;
         }
-        .btn-utility {
-            border-color: #444;
-            color: var(--text-dim);
-        }
+        .btn-utility { border-color: #444; color: var(--text-dim); }
 
         .grid {
             display: grid;
@@ -90,12 +89,18 @@
             gap: 20px;
         }
 
-        /* Updated to use semantic button elements natively */
+        /* Container box with relative positioning for card deletion buttons */
+        .card-container {
+            position: relative;
+            aspect-ratio: 1 / 1;
+        }
+
         .grid-item {
+            width: 100%;
+            height: 100%;
             background-color: var(--panel-color);
             border: 2px solid #2a2a30;
             border-radius: 8px;
-            aspect-ratio: 1 / 1;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -103,6 +108,7 @@
             cursor: pointer;
             transition: transform 0.1s, border-color 0.2s, background-color 0.2s;
             padding: 15px;
+            box-sizing: border-box;
             text-align: center;
             user-select: none;
             color: var(--text-color);
@@ -118,29 +124,110 @@
         .icon { font-size: 48px; margin-bottom: 10px; }
         .folder-icon { color: #f4b400; }
         .file-icon { color: #4ba3ff; }
-        .item-name { font-weight: 600; font-size: 16px; }
+        .item-name { font-weight: 600; font-size: 16px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Delete button built right into the card UI */
+        .btn-delete {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #333;
+            color: #888;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .btn-delete:hover {
+            background-color: var(--danger-color);
+            color: white;
+            border-color: var(--danger-color);
+        }
+
+        /* Split-screen layout style rules for Workspace Text Editor */
+        .editor-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 120px);
+            margin-top: 15px;
+        }
+
+        .editor-pane {
+            width: 100%;
+            height: 100%;
+            background-color: #0b0b0d;
+            border: 2px solid #2a2a30;
+            border-radius: 6px;
+            color: #e0e0e6;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            padding: 15px;
+            box-sizing: border-box;
+            resize: none;
+            outline: none;
+        }
+        .editor-pane:focus { border-color: var(--accent-color); }
+
+        .preview-pane {
+            background-color: var(--panel-color);
+            border: 2px solid #2a2a30;
+            border-radius: 6px;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        
+        .preview-pane h1 { font-size: 2em; border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 0; }
+        .preview-pane h2 { font-size: 1.5em; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        .preview-pane ul { padding-left: 20px; }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>ULTIMATE NOTES</h1>
-        <div class="controls">
-            <button class="btn btn-utility" onclick="exportMetadata()">Export Data</button>
-            <input type="file" id="import-file" style="display: none;" onchange="importMetadata(this)">
-            <button class="btn btn-utility" onclick="document.getElementById('import-file').click()">Import Data</button>
-            
-            <button class="btn btn-main" id="btn-folder" onclick="createNewItem('folder')">+ New Folder</button>
-            <button class="btn" id="btn-file" onclick="createNewItem('file')" style="display: none;">+ New File</button>
-        </div>
-    </header>
+    <div id="browser-view" class="view-section">
+        <header>
+            <h1>ULTIMATE NOTES</h1>
+            <div class="controls">
+                <button class="btn btn-utility" onclick="exportMetadata()">Export Data</button>
+                <input type="file" id="import-file" style="display: none;" onchange="importMetadata(this)">
+                <button class="btn btn-utility" onclick="document.getElementById('import-file').click()">Import Data</button>
+                
+                <button class="btn btn-main" id="btn-folder" onclick="createNewItem('folder')">+ New Folder</button>
+                <button class="btn" id="btn-file" onclick="createNewItem('file')" style="display: none;">+ New File</button>
+            </div>
+        </header>
 
-    <div class="nav-bar" id="breadcrumbs"></div>
-    <main class="grid" id="folder-grid"></main>
+        <div class="nav-bar" id="breadcrumbs"></div>
+        <main class="grid" id="folder-grid"></main>
+    </div>
+
+
+    <div id="editor-view" class="view-section hidden">
+        <header>
+            <h1 id="editor-file-title">Editing File</h1>
+            <div class="controls">
+                <button class="btn btn-main" onclick="closeEditor()">Save & Exit</button>
+            </div>
+        </header>
+        
+        <div class="editor-container">
+            <textarea id="markdown-input" class="editor-pane" placeholder="Type Markdown here... (e.g. # Combo Guide \n - 5HP -> 236KK)" oninput="updateLivePreview()"></textarea>
+            <div id="markdown-preview" class="preview-pane"></div>
+        </div>
+    </div>
+
 
     <script>
         let rawData = localStorage.getItem('ultimate_notes_data');
         let appData;
+        let activeFilePointer = null; // References the note object actively loaded inside workspace
 
         try {
             let parsed = JSON.parse(rawData);
@@ -182,7 +269,7 @@
             if (type === 'folder') {
                 newItem.children = [];
             } else {
-                newItem.content = "";
+                newItem.content = "# " + newItem.name + "\nWrite your tech notes here...";
             }
 
             if (!currentFolder.children) {
@@ -192,6 +279,68 @@
             currentFolder.children.push(newItem);
             saveData();
             renderGrid();
+        }
+
+        // Deletes target file/folder from child container array
+        function deleteItem(itemId, event) {
+            event.stopPropagation(); // Prevents Vimium target click or directory entry activation from firing
+            
+            if (!confirm("Are you sure you want to delete this item?")) return;
+
+            const currentFolder = getCurrentFolder();
+            currentFolder.children = currentFolder.children.filter(item => item.id !== itemId);
+            
+            saveData();
+            renderGrid();
+        }
+
+        // Activates custom Markdown Workspace UI view layout
+        function openEditor(fileItem) {
+            activeFilePointer = fileItem;
+            document.getElementById('editor-file-title').textContent = `EDITING // ${fileItem.name}`;
+            document.getElementById('markdown-input').value = fileItem.content;
+            
+            document.getElementById('browser-view').classList.add('hidden');
+            document.getElementById('editor-view').classList.remove('hidden');
+            updateLivePreview();
+        }
+
+        function closeEditor() {
+            if (activeFilePointer) {
+                activeFilePointer.content = document.getElementById('markdown-input').value;
+                saveData();
+            }
+            activeFilePointer = null;
+            document.getElementById('editor-view').classList.add('hidden');
+            document.getElementById('browser-view').classList.remove('hidden');
+            renderGrid();
+        }
+
+        // Simple built-in parser converting basic markdown syntax variations natively
+        function updateLivePreview() {
+            const rawText = document.getElementById('markdown-input').value;
+            const previewPane = document.getElementById('markdown-preview');
+            
+            // Clean/escape base HTML to prevent template execution issues
+            let html = rawText
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+
+            // Process headers, list items, and line breaks natively
+            html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+            html = html.replace(/^## (.*$)/gim, '<h2>$2</h2>');
+            html = html.replace(/^\s*-\s*(.*$)/gim, '<li>$1</li>');
+            html = html.replace(/^\s*\*\s*(.*$)/gim, '<li>$1</li>');
+            html = html.replace(/\n/g, '<br>');
+
+            // Wrap list element tag layers cleanly if elements are present
+            if (html.includes('<li>')) {
+                // Approximate grouping fix for basic previews
+                html = html.replace(/(<li>.*<\/li>)/gim, '<ul>$1</ul>');
+            }
+
+            previewPane.innerHTML = html;
         }
 
         function enterFolder(folder) {
@@ -290,8 +439,18 @@
             }
 
             currentFolder.children.forEach(item => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'card-container';
+
                 const square = document.createElement('button');
                 square.className = 'grid-item';
+
+                // Explicit delete button overlaying the card element framework
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn-delete';
+                delBtn.innerHTML = '✕';
+                delBtn.title = 'Delete';
+                delBtn.onclick = (e) => deleteItem(item.id, e);
 
                 if (item.type === 'folder') {
                     square.onclick = () => enterFolder(item);
@@ -300,14 +459,16 @@
                         <div class="item-name">${item.name}</div>
                     `;
                 } else if (item.type === 'file') {
-                    square.onclick = () => alert(`Opening text editor view for file: ${item.name}`);
+                    square.onclick = () => openEditor(item);
                     square.innerHTML = `
                         <div class="icon file-icon">📄</div>
                         <div class="item-name">${item.name}</div>
                     `;
                 }
 
-                grid.appendChild(square);
+                wrapper.appendChild(square);
+                wrapper.appendChild(delBtn);
+                grid.appendChild(wrapper);
             });
         }
 
