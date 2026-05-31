@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Ultimate Note-Taking Website</title>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --panel-color: #1a1a1e;
+            --accent-color: #ff4655; /* Fighting game style red */
+            --text-color: #ffffff;
+            --text-dim: #a0a0a5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--panel-color);
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        h1 { margin: 0; font-size: 24px; letter-spacing: 1px; }
+
+        .btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover { background-color: #e03e4b; }
+
+        /* The Big Squares Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .grid-item {
+            background-color: var(--panel-color);
+            border: 2px solid #2a2a30;
+            border-radius: 8px;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.1s, border-color 0.2s;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .grid-item:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-color);
+        }
+
+        .folder-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+            color: #f4b400;
+        }
+
+        .folder-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>ULTIMATE NOTES // <span id="current-folder-title">Root</span></h1>
+        <button class="btn" onclick="createNewFolder()">+ New Folder</button>
+    </header>
+
+    <main class="grid" id="folder-grid"></main>
+
+    <script>
+        // Initialize app data structure from localStorage, or start empty
+        let appData = JSON.parse(localStorage.getItem('ultimate_notes_data')) || {
+            folders: []
+        };
+
+        // Function to save the data back to the browser
+        function saveData() {
+            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
+        }
+
+        // Function to prompt user and create a folder
+        function createNewFolder() {
+            const folderName = prompt("Enter folder name (e.g., Street Fighter 6, Tekken 8):");
+            if (!folderName || folderName.trim() === "") return;
+
+            const newFolder = {
+                id: 'folder_' + Date.now(),
+                name: folderName.trim()
+            };
+
+            appData.folders.push(newFolder);
+            saveData();
+            renderGrid();
+        }
+
+        // Function to turn data into the "Big Squares" on screen
+        function renderGrid() {
+            const grid = document.getElementById('folder-grid');
+            grid.innerHTML = ''; // Clear existing visual elements
+
+            if (appData.folders.length === 0) {
+                grid.innerHTML = `<p style="color: var(--text-dim);">No folders yet. Click '+ New Folder' to get started!</p>`;
+                return;
+            }
+
+            appData.folders.forEach(folder => {
+                // Create the element for the big square
+                const square = document.createElement('div');
+                square.className = 'grid-item';
+                square.onclick = () => alert(`Entering ${folder.name} (Note editing coming next!)`);
+
+                square.innerHTML = `
+                    <div class="folder-icon">📁</div>
+                    <div class="folder-name">${folder.name}</div>
+                `;
+
+                grid.appendChild(square);
+            });
+        }
+
+        // Initial render when loading the page
+        renderGrid();
+    </script>
+</body>
+</html>
