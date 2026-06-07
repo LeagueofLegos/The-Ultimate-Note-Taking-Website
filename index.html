@@ -6,18 +6,24 @@
     <title>The Ultimate Note-Taking Website</title>
     <style>
         :root {
-            --bg-color: #121214;
-            --panel-color: #1a1a1e;
-            --accent-color: #ff4655;
-            --text-color: #ffffff;
+            --bg-color: #121216;
+            --panel-color: #1c1c22;
+            --accent-color: #ffb703;
+            --text-color: #e2e2e7;
             --text-dim: #a0a0a5;
             --danger-color: #e74c3c;
-            --move-color: #3498db;
+            --move-color: #2196f3;
+            --dustloop-dark: #151518;
+            --dustloop-border: #2d2d38;
         }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
             color: var(--text-color);
             margin: 0;
             padding: 20px;
@@ -30,12 +36,54 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid var(--panel-color);
+            border-bottom: 2px solid var(--dustloop-border);
             padding-bottom: 15px;
             margin-bottom: 15px;
+            background: rgba(28, 28, 34, 0.85);
+            padding: 15px;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
         }
 
-        h1 { margin: 0; font-size: 24px; letter-spacing: 1px; }
+        h1 { margin: 0; font-size: 24px; letter-spacing: 1px; color: var(--accent-color); font-weight: 700; }
+
+        .search-box {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px 14px;
+            background-color: var(--dustloop-dark);
+            border: 2px solid var(--dustloop-border);
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 20px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .search-box:focus {
+            border-color: var(--accent-color);
+        }
+
+        .search-results-pane {
+            background-color: var(--panel-color);
+            border: 2px solid var(--dustloop-border);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .search-results-pane h3 { margin-top: 0; color: var(--accent-color); }
+        .search-result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid var(--dustloop-border);
+            cursor: pointer;
+        }
+        .search-result-item:hover {
+            background-color: rgba(255, 183, 3, 0.1);
+        }
+        .search-path { font-size: 12px; color: var(--text-dim); }
 
         .nav-bar {
             display: flex;
@@ -44,6 +92,9 @@
             margin-bottom: 25px;
             font-size: 14px;
             color: var(--text-dim);
+            background: rgba(21, 21, 24, 0.8);
+            padding: 10px;
+            border-radius: 4px;
         }
 
         .nav-link {
@@ -57,12 +108,12 @@
         }
         .nav-link:hover { text-decoration: underline; }
 
-        .controls { display: flex; gap: 10px; }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
 
         .btn {
             background-color: var(--panel-color);
             color: white;
-            border: 2px solid #2a2a30;
+            border: 2px solid var(--dustloop-border);
             padding: 10px 16px;
             font-weight: bold;
             border-radius: 4px;
@@ -71,39 +122,42 @@
         }
         .btn:hover { 
             border-color: var(--accent-color);
-            background-color: #1f1f24;
+            background-color: #25252d;
         }
         .btn-main {
-            background-color: var(--accent-color);
+            background-color: #2d2d38;
             border-color: var(--accent-color);
+            color: var(--accent-color);
         }
         .btn-main:hover {
-            background-color: #e03e4b;
-            border-color: #e03e4b;
+            background-color: var(--accent-color);
+            color: var(--dustloop-dark);
         }
         .btn-utility { border-color: #444; color: var(--text-dim); }
         
-        /* High-visibility active paste button state */
         .btn-paste {
             background-color: var(--move-color);
             border-color: var(--move-color);
             animation: pulse 2s infinite;
         }
         .btn-paste:hover {
-            background-color: #2980b9;
-            border-color: #2980b9;
+            background-color: #1976d2;
+            border-color: #1976d2;
         }
 
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.4); }
-            70% { box-shadow: 0 0 0 6px rgba(52, 152, 219, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(33, 150, 243, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
         }
 
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 20px;
+            background: rgba(21, 21, 24, 0.6);
+            padding: 20px;
+            border-radius: 8px;
         }
 
         .card-container {
@@ -115,8 +169,8 @@
             width: 100%;
             height: 100%;
             background-color: var(--panel-color);
-            border: 2px solid #2a2a30;
-            border-radius: 8px;
+            border: 2px solid var(--dustloop-border);
+            border-radius: 6px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -134,10 +188,9 @@
         .grid-item:hover {
             transform: translateY(-2px);
             border-color: var(--accent-color);
-            background-color: #1f1f24;
+            background-color: #22222a;
         }
 
-        /* Gray out a card when it's actively holding the cut state */
         .grid-item.moving {
             opacity: 0.4;
             border-style: dashed;
@@ -145,18 +198,16 @@
         }
 
         .icon { font-size: 48px; margin-bottom: 10px; }
-        .folder-icon { color: #f4b400; }
-        .file-icon { color: #4ba3ff; }
+        .folder-icon { color: var(--accent-color); }
+        .file-icon { color: #5c78ff; }
         .item-name { font-weight: 600; font-size: 16px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        /* Action overlays on top of the card boxes */
-        .btn-delete {
+        .btn-delete, .btn-move {
             position: absolute;
             top: 8px;
-            right: 8px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #333;
-            color: #888;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #444;
+            color: #aaa;
             border-radius: 4px;
             width: 24px;
             height: 24px;
@@ -167,50 +218,34 @@
             justify-content: center;
             z-index: 10;
         }
-        .btn-delete:hover {
-            background-color: var(--danger-color);
-            color: white;
-            border-color: var(--danger-color);
-        }
+        .btn-delete { right: 8px; }
+        .btn-delete:hover { background-color: var(--danger-color); color: white; border-color: var(--danger-color); }
+        .btn-move { left: 8px; font-size: 14px; }
+        .btn-move:hover { background-color: var(--move-color); color: white; border-color: var(--move-color); }
 
-        .btn-move {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #333;
-            color: #888;
-            border-radius: 4px;
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-            font-size: 14px;
+        .editor-layout {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-        .btn-move:hover {
-            background-color: var(--move-color);
-            color: white;
-            border-color: var(--move-color);
+            flex-direction: column;
+            gap: 15px;
+            height: calc(100vh - 120px);
+            margin-top: 15px;
         }
 
         .editor-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
-            height: calc(100vh - 120px);
-            margin-top: 15px;
+            flex: 1;
+            min-height: 0;
         }
 
         .editor-pane {
             width: 100%;
             height: 100%;
-            background-color: #0b0b0d;
-            border: 2px solid #2a2a30;
+            background-color: var(--dustloop-dark);
+            border: 2px solid var(--dustloop-border);
             border-radius: 6px;
-            color: #e0e0e6;
+            color: #f1f1f1;
             font-family: 'Courier New', Courier, monospace;
             font-size: 16px;
             padding: 15px;
@@ -222,16 +257,41 @@
 
         .preview-pane {
             background-color: var(--panel-color);
-            border: 2px solid #2a2a30;
+            border: 2px solid var(--dustloop-border);
             border-radius: 6px;
             padding: 20px;
             box-sizing: border-box;
             overflow-y: auto;
         }
         
-        .preview-pane h1 { font-size: 2em; border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 0; }
-        .preview-pane h2 { font-size: 1.5em; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        .preview-pane h1 { font-size: 2em; border-bottom: 2px solid var(--accent-color); padding-bottom: 5px; margin-top: 0; color: white; }
+        .preview-pane h2 { font-size: 1.5em; border-bottom: 1px solid var(--dustloop-border); padding-bottom: 5px; color: var(--accent-color); }
+        .preview-pane h3 { font-size: 1.2em; color: #e2e2e7; margin-top: 15px; }
         .preview-pane ul { padding-left: 20px; }
+        .preview-pane br { content: ""; display: block; margin: 6px 0; }
+
+        .help-panel {
+            background-color: var(--panel-color);
+            border: 2px solid var(--dustloop-border);
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 13px;
+        }
+        .help-title {
+            font-weight: bold;
+            color: var(--accent-color);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+        }
+        .help-content {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            color: var(--text-dim);
+        }
+        .help-content code { background: #000; padding: 2px 4px; border-radius: 3px; color: #fff; }
     </style>
 </head>
 <body>
@@ -243,12 +303,21 @@
                 <button class="btn btn-utility" onclick="exportMetadata()">Export Data</button>
                 <input type="file" id="import-file" style="display: none;" onchange="importMetadata(this)">
                 <button class="btn btn-utility" onclick="document.getElementById('import-file').click()">Import Data</button>
+                <input type="file" id="bg-upload" style="display: none;" accept="image/*" onchange="uploadBackground(this)">
+                <button class="btn btn-utility" onclick="document.getElementById('bg-upload').click()">🖼️ BG Art</button>
                 
                 <button class="btn btn-paste" id="btn-paste" onclick="pasteItem()" style="display: none;">📋 Paste Here</button>
                 <button class="btn btn-main" id="btn-folder" onclick="createNewItem('folder')">+ New Folder</button>
                 <button class="btn" id="btn-file" onclick="createNewItem('file')" style="display: none;">+ New File</button>
             </div>
         </header>
+
+        <input type="text" id="searchBar" class="search-box" placeholder="🔍 Search folders and files across the database..." oninput="handleGlobalSearch()">
+        
+        <div id="search-results" class="search-results-pane hidden">
+            <h3>Search Results</h3>
+            <div id="search-results-list"></div>
+        </div>
 
         <div class="nav-bar" id="breadcrumbs"></div>
         <main class="grid" id="folder-grid"></main>
@@ -263,9 +332,24 @@
             </div>
         </header>
         
-        <div class="editor-container">
-            <textarea id="markdown-input" class="editor-pane" placeholder="Type Markdown here..." oninput="updateLivePreview()"></textarea>
-            <div id="markdown-preview" class="preview-pane"></div>
+        <div class="editor-layout">
+            <div class="editor-container">
+                <textarea id="markdown-input" class="editor-pane" placeholder="Type Markdown here..." oninput="updateLivePreview()"></textarea>
+                <div id="markdown-preview" class="preview-pane"></div>
+            </div>
+
+            <div class="help-panel">
+                <div class="help-title" onclick="toggleHelp()">
+                    <span>💡 Formatting Cheat Sheet (Click to Toggle options)</span>
+                    <span id="help-toggle-icon">▲</span>
+                </div>
+                <div id="help-options" class="help-content">
+                    <div><code># Character Name</code> → Title Headings</div>
+                    <div><code>## Category Name</code> → Mid-tier Sections</div>
+                    <div><code>### Combo Variation</code> → Deep Sub-sections</div>
+                    <div><code>- 2A > 5B > 2C</code> → Bullet Points</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -275,7 +359,6 @@
         let appData;
         let activeFilePointer = null; 
         
-        // Tracking state variables for the clipboard system
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
 
@@ -288,9 +371,15 @@
             }
         } catch(e) {
             appData = {
-                notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] }
+                notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] },
+                backgroundImage: ""
             };
             localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
+        }
+
+        // Apply background if saved
+        if (appData.backgroundImage) {
+            document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
         }
 
         let navigationHistory = [appData.notebooks];
@@ -319,7 +408,7 @@
             if (type === 'folder') {
                 newItem.children = [];
             } else {
-                newItem.content = "# " + newItem.name + "\nWrite your tech notes here...";
+                newItem.content = "# " + newItem.name + "\n## Combos\n- Write notes here...\n\n### Meterless\n- Add tech notations here...";
             }
 
             if (!currentFolder.children) {
@@ -338,7 +427,6 @@
             const currentFolder = getCurrentFolder();
             currentFolder.children = currentFolder.children.filter(item => item.id !== itemId);
             
-            // Clear moving reference if the cut item gets deleted directly
             if (movingItemPointer && movingItemPointer.id === itemId) {
                 cancelMove();
             }
@@ -347,7 +435,6 @@
             renderGrid();
         }
 
-        // Stores target item and its directory source location into memory
         function startMoveItem(item, event) {
             event.stopPropagation();
             movingItemPointer = item;
@@ -355,37 +442,31 @@
             renderGrid();
         }
 
-        // Commits moving item to target active folder array structure
         function pasteItem() {
             if (!movingItemPointer) return;
 
             const targetFolder = getCurrentFolder();
 
-            // Self-nesting prevention check rule
             if (movingItemPointer.id === targetFolder.id) {
                 alert("Error: You can't paste a folder inside itself!");
                 cancelMove();
                 return;
             }
 
-            // Descendant nesting validation helper check
             if (isDescendant(movingItemPointer, targetFolder)) {
                 alert("Error: You cannot move a parent folder inside one of its own sub-folders!");
                 cancelMove();
                 return;
             }
 
-            // Remove from original directory array container mapping
             const index = movingItemParentArrayRef.indexOf(movingItemPointer);
             if (index > -1) {
                 movingItemParentArrayRef.splice(index, 1);
             }
 
-            // Inject into target directory container setup mapping
             if (!targetFolder.children) targetFolder.children = [];
             targetFolder.children.push(movingItemPointer);
 
-            // Clean tracking state allocations
             movingItemPointer = null;
             movingItemParentArrayRef = null;
 
@@ -393,7 +474,6 @@
             renderGrid();
         }
 
-        // Recursively ensures deep structural loops are mathematically impossible
         function isDescendant(parentFolder, targetFolder) {
             if (parentFolder.type !== 'folder' || !parentFolder.children) return false;
             
@@ -414,7 +494,7 @@
 
         function openEditor(fileItem) {
             activeFilePointer = fileItem;
-            document.getElementById('editor-file-title').textContent = `EDITING // ${fileItem.name}`;
+            document.getElementById('editor-file-title').textContent = `EDITING // ${fileItem.name.toUpperCase()}`;
             document.getElementById('markdown-input').value = fileItem.content;
             
             document.getElementById('browser-view').classList.add('hidden');
@@ -442,8 +522,10 @@
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;");
 
+            // Fixed Markdown rules parsing headers correctly without offset variables
             html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-            html = html.replace(/^## (.*$)/gim, '<h2>$2</h2>');
+            html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+            html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
             html = html.replace(/^\s*-\s*(.*$)/gim, '<li>$1</li>');
             html = html.replace(/^\s*\*\s*(.*$)/gim, '<li>$1</li>');
             html = html.replace(/\n/g, '<br>');
@@ -453,6 +535,89 @@
             }
 
             previewPane.innerHTML = html;
+        }
+
+        function toggleHelp() {
+            const options = document.getElementById('help-options');
+            const icon = document.getElementById('help-toggle-icon');
+            if (options.classList.contains('hidden')) {
+                options.classList.remove('hidden');
+                icon.textContent = "▲";
+            } else {
+                options.classList.add('hidden');
+                icon.textContent = "▼";
+            }
+        }
+
+        function uploadBackground(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                appData.backgroundImage = e.target.result;
+                document.body.style.backgroundImage = `url('${e.target.result}')`;
+                saveData();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Deep database crawling function targeting paths for instant selection routing
+        function handleGlobalSearch() {
+            const query = document.getElementById('searchBar').value.toLowerCase().trim();
+            const resultsPane = document.getElementById('search-results');
+            const resultsList = document.getElementById('search-results-list');
+            
+            if (!query) {
+                resultsPane.classList.add('hidden');
+                return;
+            }
+
+            resultsList.innerHTML = '';
+            let matches = [];
+
+            function crawl(item, currentPath) {
+                if (item.id !== 'root' && item.name.toLowerCase().includes(query)) {
+                    matches.push({ item: item, path: currentPath.concat(item) });
+                }
+                if (item.children) {
+                    item.children.forEach(child => crawl(child, currentPath.concat(item)));
+                }
+            }
+
+            crawl(appData.notebooks, []);
+
+            if (matches.length === 0) {
+                resultsList.innerHTML = `<p style="color: var(--text-dim); font-size: 14px;">No files or folders match your query.</p>`;
+            } else {
+                matches.forEach(match => {
+                    const div = document.createElement('div');
+                    div.className = 'search-result-item';
+                    
+                    const pathString = match.path.map(p => p.name).join(' ➔ ');
+                    const typeIcon = match.item.type === 'folder' ? '📁' : '📄';
+                    
+                    div.innerHTML = `
+                        <div><strong>${typeIcon} ${match.item.name}</strong></div>
+                        <div class="search-path">${pathString}</div>
+                    `;
+                    
+                    div.onclick = () => {
+                        navigationHistory = match.path.slice(0, -1);
+                        document.getElementById('searchBar').value = '';
+                        resultsPane.classList.add('hidden');
+                        
+                        if (match.item.type === 'folder') {
+                            enterFolder(match.item);
+                        } else {
+                            navigationHistory.push(getCurrentFolder()); 
+                            openEditor(match.item);
+                        }
+                    };
+                    resultsList.appendChild(div);
+                });
+            }
+            resultsPane.classList.remove('hidden');
         }
 
         function enterFolder(folder) {
@@ -479,7 +644,6 @@
                 folderBtn.textContent = '+ New Sub-Folder';
             }
 
-            // Toggle global paste capability button rendering visibility
             if (movingItemPointer) {
                 pasteBtn.style.display = 'inline-block';
             } else {
@@ -508,7 +672,12 @@
                     if (parsedData.notebooks && parsedData.notebooks.id === 'root') {
                         appData = parsedData;
                         navigationHistory = [appData.notebooks];
-                        cancelMove(); // Wipe old tracking clipboard data maps
+                        if (appData.backgroundImage) {
+                            document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
+                        } else {
+                            document.body.style.backgroundImage = 'none';
+                        }
+                        cancelMove(); 
                         saveData();
                         renderGrid();
                         alert("Metadata imported successfully!");
@@ -566,19 +735,16 @@
                 const square = document.createElement('button');
                 square.className = 'grid-item';
                 
-                // Highlight item if it's currently selected to be moved
                 if (movingItemPointer && movingItemPointer.id === item.id) {
                     square.classList.add('moving');
                 }
 
-                // Delete overlay button setup
                 const delBtn = document.createElement('button');
                 delBtn.className = 'btn-delete';
                 delBtn.innerHTML = '✕';
                 delBtn.title = 'Delete';
                 delBtn.onclick = (e) => deleteItem(item.id, e);
 
-                // Semantic Move overlay button setup
                 const moveBtn = document.createElement('button');
                 moveBtn.className = 'btn-move';
                 moveBtn.innerHTML = '⤳';
