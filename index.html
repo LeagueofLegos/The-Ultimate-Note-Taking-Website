@@ -15,6 +15,7 @@
             --move-color: #2196f3;
             --dustloop-dark: #151518;
             --dustloop-border: #2d2d38;
+            --grid-block-color: #25252d;
         }
 
         body {
@@ -60,9 +61,7 @@
             outline: none;
             box-sizing: border-box;
         }
-        .search-box:focus {
-            border-color: var(--accent-color);
-        }
+        .search-box:focus { border-color: var(--accent-color); }
 
         .search-results-pane {
             background-color: var(--panel-color);
@@ -72,17 +71,21 @@
             margin-bottom: 20px;
         }
         .search-results-pane h3 { margin-top: 0; color: var(--accent-color); }
+        
+        /* Fixed Keyboard-Navigable Search Elements */
         .search-result-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px;
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            font-family: inherit;
+            color: inherit;
+            padding: 10px;
             border-bottom: 1px solid var(--dustloop-border);
             cursor: pointer;
         }
-        .search-result-item:hover {
-            background-color: rgba(255, 183, 3, 0.1);
-        }
+        .search-result-item:hover { background-color: rgba(255, 183, 3, 0.1); }
         .search-path { font-size: 12px; color: var(--text-dim); }
 
         .nav-bar {
@@ -151,6 +154,7 @@
             100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
         }
 
+        /* Standard Navigation Grid */
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -158,12 +162,51 @@
             background: rgba(21, 21, 24, 0.6);
             padding: 20px;
             border-radius: 8px;
+            margin-bottom: 20px;
         }
 
-        .card-container {
-            position: relative;
-            aspect-ratio: 1 / 1;
+        /* NEW FEATURE: Combo Block Containers (Dustloop Grid Style) */
+        .combo-grid-section {
+            background: rgba(28, 28, 34, 0.9);
+            border: 2px solid var(--dustloop-border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 25px;
         }
+        .combo-grid-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+        .combo-grid-title { margin: 0; font-size: 18px; color: var(--accent-color); font-weight: bold; }
+        
+        .combo-entries-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        .combo-row-card {
+            background-color: var(--dustloop-dark);
+            border: 1px solid var(--dustloop-border);
+            border-radius: 4px;
+            padding: 12px;
+            position: relative;
+        }
+        .combo-notation {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 15px;
+            color: #fff;
+            background: #000;
+            padding: 6px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 6px;
+        }
+
+        .card-container { position: relative; aspect-ratio: 1 / 1; }
 
         .grid-item {
             width: 100%;
@@ -184,22 +227,17 @@
             color: var(--text-color);
             font-family: inherit;
         }
-
         .grid-item:hover {
             transform: translateY(-2px);
             border-color: var(--accent-color);
             background-color: #22222a;
         }
-
-        .grid-item.moving {
-            opacity: 0.4;
-            border-style: dashed;
-            border-color: var(--move-color);
-        }
+        .grid-item.moving { opacity: 0.4; border-style: dashed; border-color: var(--move-color); }
 
         .icon { font-size: 48px; margin-bottom: 10px; }
         .folder-icon { color: var(--accent-color); }
         .file-icon { color: #5c78ff; }
+        .grid-icon { color: #2ecc71; }
         .item-name { font-weight: 600; font-size: 16px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         .btn-delete, .btn-move {
@@ -223,74 +261,25 @@
         .btn-move { left: 8px; font-size: 14px; }
         .btn-move:hover { background-color: var(--move-color); color: white; border-color: var(--move-color); }
 
-        .editor-layout {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            height: calc(100vh - 120px);
-            margin-top: 15px;
-        }
-
-        .editor-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            flex: 1;
-            min-height: 0;
-        }
-
+        .editor-layout { display: flex; flex-direction: column; gap: 15px; height: calc(100vh - 120px); margin-top: 15px; }
+        .editor-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; min-height: 0; }
         .editor-pane {
-            width: 100%;
-            height: 100%;
-            background-color: var(--dustloop-dark);
-            border: 2px solid var(--dustloop-border);
-            border-radius: 6px;
-            color: #f1f1f1;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 16px;
-            padding: 15px;
-            box-sizing: border-box;
-            resize: none;
-            outline: none;
+            width: 100%; height: 100%; background-color: var(--dustloop-dark); border: 2px solid var(--dustloop-border);
+            border-radius: 6px; color: #f1f1f1; font-family: 'Courier New', Courier, monospace; font-size: 16px;
+            padding: 15px; box-sizing: border-box; resize: none; outline: none;
         }
         .editor-pane:focus { border-color: var(--accent-color); }
 
-        .preview-pane {
-            background-color: var(--panel-color);
-            border: 2px solid var(--dustloop-border);
-            border-radius: 6px;
-            padding: 20px;
-            box-sizing: border-box;
-            overflow-y: auto;
-        }
-        
+        .preview-pane { background-color: var(--panel-color); border: 2px solid var(--dustloop-border); border-radius: 6px; padding: 20px; box-sizing: border-box; overflow-y: auto; }
         .preview-pane h1 { font-size: 2em; border-bottom: 2px solid var(--accent-color); padding-bottom: 5px; margin-top: 0; color: white; }
         .preview-pane h2 { font-size: 1.5em; border-bottom: 1px solid var(--dustloop-border); padding-bottom: 5px; color: var(--accent-color); }
         .preview-pane h3 { font-size: 1.2em; color: #e2e2e7; margin-top: 15px; }
         .preview-pane ul { padding-left: 20px; }
         .preview-pane br { content: ""; display: block; margin: 6px 0; }
 
-        .help-panel {
-            background-color: var(--panel-color);
-            border: 2px solid var(--dustloop-border);
-            border-radius: 6px;
-            padding: 12px;
-            font-size: 13px;
-        }
-        .help-title {
-            font-weight: bold;
-            color: var(--accent-color);
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-        }
-        .help-content {
-            margin-top: 10px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-            color: var(--text-dim);
-        }
+        .help-panel { background-color: var(--panel-color); border: 2px solid var(--dustloop-border); border-radius: 6px; padding: 12px; font-size: 13px; }
+        .help-title { font-weight: bold; color: var(--accent-color); cursor: pointer; display: flex; justify-content: space-between; }
+        .help-content { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; color: var(--text-dim); }
         .help-content code { background: #000; padding: 2px 4px; border-radius: 3px; color: #fff; }
     </style>
 </head>
@@ -309,6 +298,7 @@
                 <button class="btn btn-paste" id="btn-paste" onclick="pasteItem()" style="display: none;">📋 Paste Here</button>
                 <button class="btn btn-main" id="btn-folder" onclick="createNewItem('folder')">+ New Folder</button>
                 <button class="btn" id="btn-file" onclick="createNewItem('file')" style="display: none;">+ New File</button>
+                <button class="btn btn-main" id="btn-grid" onclick="createNewItem('grid')" style="display: none;">📊 + New Grid</button>
             </div>
         </header>
 
@@ -321,460 +311,6 @@
 
         <div class="nav-bar" id="breadcrumbs"></div>
         <main class="grid" id="folder-grid"></main>
-    </div>
-
-
-    <div id="editor-view" class="view-section hidden">
-        <header>
-            <h1 id="editor-file-title">Editing File</h1>
-            <div class="controls">
-                <button class="btn btn-main" onclick="closeEditor()">Save & Exit</button>
-            </div>
-        </header>
         
-        <div class="editor-layout">
-            <div class="editor-container">
-                <textarea id="markdown-input" class="editor-pane" placeholder="Type Markdown here..." oninput="updateLivePreview()"></textarea>
-                <div id="markdown-preview" class="preview-pane"></div>
-            </div>
-
-            <div class="help-panel">
-                <div class="help-title" onclick="toggleHelp()">
-                    <span>💡 Formatting Cheat Sheet (Click to Toggle options)</span>
-                    <span id="help-toggle-icon">▲</span>
-                </div>
-                <div id="help-options" class="help-content">
-                    <div><code># Character Name</code> → Title Headings</div>
-                    <div><code>## Category Name</code> → Mid-tier Sections</div>
-                    <div><code>### Combo Variation</code> → Deep Sub-sections</div>
-                    <div><code>- 2A > 5B > 2C</code> → Bullet Points</div>
-                </div>
-            </div>
-        </div>
+        <div id="active-combo-grids-zone"></div>
     </div>
-
-
-    <script>
-        let rawData = localStorage.getItem('ultimate_notes_data');
-        let appData;
-        let activeFilePointer = null; 
-        
-        let movingItemPointer = null; 
-        let movingItemParentArrayRef = null; 
-
-        try {
-            let parsed = JSON.parse(rawData);
-            if (parsed && parsed.notebooks && parsed.notebooks.id === 'root') {
-                appData = parsed;
-            } else {
-                throw new Error("Old structure detected");
-            }
-        } catch(e) {
-            appData = {
-                notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] },
-                backgroundImage: ""
-            };
-            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
-        }
-
-        // Apply background if saved
-        if (appData.backgroundImage) {
-            document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
-        }
-
-        let navigationHistory = [appData.notebooks];
-
-        function saveData() {
-            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
-        }
-
-        function getCurrentFolder() {
-            return navigationHistory[navigationHistory.length - 1];
-        }
-
-        function createNewItem(type) {
-            const currentFolder = getCurrentFolder();
-            const promptMsg = type === 'folder' ? "Enter folder name:" : "Enter file name:";
-            const name = prompt(promptMsg);
-            
-            if (!name || name.trim() === "") return;
-
-            const newItem = {
-                id: type + '_' + Date.now(),
-                name: name.trim(),
-                type: type
-            };
-
-            if (type === 'folder') {
-                newItem.children = [];
-            } else {
-                newItem.content = "# " + newItem.name + "\n## Combos\n- Write notes here...\n\n### Meterless\n- Add tech notations here...";
-            }
-
-            if (!currentFolder.children) {
-                currentFolder.children = [];
-            }
-
-            currentFolder.children.push(newItem);
-            saveData();
-            renderGrid();
-        }
-
-        function deleteItem(itemId, event) {
-            event.stopPropagation(); 
-            if (!confirm("Are you sure you want to delete this item?")) return;
-
-            const currentFolder = getCurrentFolder();
-            currentFolder.children = currentFolder.children.filter(item => item.id !== itemId);
-            
-            if (movingItemPointer && movingItemPointer.id === itemId) {
-                cancelMove();
-            }
-
-            saveData();
-            renderGrid();
-        }
-
-        function startMoveItem(item, event) {
-            event.stopPropagation();
-            movingItemPointer = item;
-            movingItemParentArrayRef = getCurrentFolder().children;
-            renderGrid();
-        }
-
-        function pasteItem() {
-            if (!movingItemPointer) return;
-
-            const targetFolder = getCurrentFolder();
-
-            if (movingItemPointer.id === targetFolder.id) {
-                alert("Error: You can't paste a folder inside itself!");
-                cancelMove();
-                return;
-            }
-
-            if (isDescendant(movingItemPointer, targetFolder)) {
-                alert("Error: You cannot move a parent folder inside one of its own sub-folders!");
-                cancelMove();
-                return;
-            }
-
-            const index = movingItemParentArrayRef.indexOf(movingItemPointer);
-            if (index > -1) {
-                movingItemParentArrayRef.splice(index, 1);
-            }
-
-            if (!targetFolder.children) targetFolder.children = [];
-            targetFolder.children.push(movingItemPointer);
-
-            movingItemPointer = null;
-            movingItemParentArrayRef = null;
-
-            saveData();
-            renderGrid();
-        }
-
-        function isDescendant(parentFolder, targetFolder) {
-            if (parentFolder.type !== 'folder' || !parentFolder.children) return false;
-            
-            for (let child of parentFolder.children) {
-                if (child.id === targetFolder.id) return true;
-                if (child.type === 'folder') {
-                    if (isDescendant(child, targetFolder)) return true;
-                }
-            }
-            return false;
-        }
-
-        function cancelMove() {
-            movingItemPointer = null;
-            movingItemParentArrayRef = null;
-            renderGrid();
-        }
-
-        function openEditor(fileItem) {
-            activeFilePointer = fileItem;
-            document.getElementById('editor-file-title').textContent = `EDITING // ${fileItem.name.toUpperCase()}`;
-            document.getElementById('markdown-input').value = fileItem.content;
-            
-            document.getElementById('browser-view').classList.add('hidden');
-            document.getElementById('editor-view').classList.remove('hidden');
-            updateLivePreview();
-        }
-
-        function closeEditor() {
-            if (activeFilePointer) {
-                activeFilePointer.content = document.getElementById('markdown-input').value;
-                saveData();
-            }
-            activeFilePointer = null;
-            document.getElementById('editor-view').classList.add('hidden');
-            document.getElementById('browser-view').classList.remove('hidden');
-            renderGrid();
-        }
-
-        function updateLivePreview() {
-            const rawText = document.getElementById('markdown-input').value;
-            const previewPane = document.getElementById('markdown-preview');
-            
-            let html = rawText
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;");
-
-            // Fixed Markdown rules parsing headers correctly without offset variables
-            html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-            html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-            html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-            html = html.replace(/^\s*-\s*(.*$)/gim, '<li>$1</li>');
-            html = html.replace(/^\s*\*\s*(.*$)/gim, '<li>$1</li>');
-            html = html.replace(/\n/g, '<br>');
-
-            if (html.includes('<li>')) {
-                html = html.replace(/(<li>.*<\/li>)/gim, '<ul>$1</ul>');
-            }
-
-            previewPane.innerHTML = html;
-        }
-
-        function toggleHelp() {
-            const options = document.getElementById('help-options');
-            const icon = document.getElementById('help-toggle-icon');
-            if (options.classList.contains('hidden')) {
-                options.classList.remove('hidden');
-                icon.textContent = "▲";
-            } else {
-                options.classList.add('hidden');
-                icon.textContent = "▼";
-            }
-        }
-
-        function uploadBackground(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                appData.backgroundImage = e.target.result;
-                document.body.style.backgroundImage = `url('${e.target.result}')`;
-                saveData();
-            };
-            reader.readAsDataURL(file);
-        }
-
-	// Deep database crawling function targeting paths for instant selection routing
-        function handleGlobalSearch() {
-            const query = document.getElementById('searchBar').value.toLowerCase().trim();
-            const resultsPane = document.getElementById('search-results');
-            const resultsList = document.getElementById('search-results-list');
-            
-            if (!query) {
-                resultsPane.classList.add('hidden');
-                return;
-            }
-
-            resultsList.innerHTML = '';
-            let matches = [];
-
-            function crawl(item, currentPath) {
-                if (item.id !== 'root' && item.name.toLowerCase().includes(query)) {
-                    matches.push({ item: item, path: currentPath.concat(item) });
-                }
-                if (item.children) {
-                    item.children.forEach(child => crawl(child, currentPath.concat(item)));
-                }
-            }
-
-            crawl(appData.notebooks, []);
-
-            if (matches.length === 0) {
-                resultsList.innerHTML = `<p style="color: var(--text-dim); font-size: 14px;">No files or folders match your query.</p>`;
-            } else {
-                matches.forEach(match => {
-                    // CHANGED: Use a native button element instead of a div so it registers as an interactive element
-                    const btn = document.createElement('button');
-                    btn.className = 'search-result-item';
-                    btn.style.cssText = "width: 100%; text-align: left; background: none; border: none; font-family: inherit; color: inherit;";
-                    
-                    const pathString = match.path.map(p => p.name).join(' ➔ ');
-                    const typeIcon = match.item.type === 'folder' ? '📁' : '📄';
-                    
-                    btn.innerHTML = `
-                        <div><strong>${typeIcon} ${match.item.name}</strong></div>
-                        <div class="search-path">${pathString}</div>
-                    `;
-                    
-                    btn.onclick = () => {
-                        navigationHistory = match.path.slice(0, -1);
-                        document.getElementById('searchBar').value = '';
-                        resultsPane.classList.add('hidden');
-                        
-                        if (match.item.type === 'folder') {
-                            enterFolder(match.item);
-                        } else {
-                            navigationHistory.push(getCurrentFolder()); 
-                            openEditor(match.item);
-                        }
-                    };
-                    resultsList.appendChild(btn);
-                });
-            }
-            resultsPane.classList.remove('hidden');
-        }
-
-        function enterFolder(folder) {
-            navigationHistory.push(folder);
-            renderGrid();
-        }
-
-        function navigateTo(index) {
-            navigationHistory = navigationHistory.slice(0, index + 1);
-            renderGrid();
-        }
-
-        function updateControlButtons() {
-            const currentFolder = getCurrentFolder();
-            const fileBtn = document.getElementById('btn-file');
-            const folderBtn = document.getElementById('btn-folder');
-            const pasteBtn = document.getElementById('btn-paste');
-
-            if (currentFolder.id === 'root') {
-                fileBtn.style.display = 'none';
-                folderBtn.textContent = '+ New Folder';
-            } else {
-                fileBtn.style.display = 'inline-block';
-                folderBtn.textContent = '+ New Sub-Folder';
-            }
-
-            if (movingItemPointer) {
-                pasteBtn.style.display = 'inline-block';
-            } else {
-                pasteBtn.style.display = 'none';
-            }
-        }
-
-        function exportMetadata() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "ultimate_notes_backup.json");
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-
-        function importMetadata(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const parsedData = JSON.parse(e.target.result);
-                    if (parsedData.notebooks && parsedData.notebooks.id === 'root') {
-                        appData = parsedData;
-                        navigationHistory = [appData.notebooks];
-                        if (appData.backgroundImage) {
-                            document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
-                        } else {
-                            document.body.style.backgroundImage = 'none';
-                        }
-                        cancelMove(); 
-                        saveData();
-                        renderGrid();
-                        alert("Metadata imported successfully!");
-                    } else {
-                        alert("Invalid backup file structure.");
-                    }
-                } catch (err) {
-                    alert("Error reading file.");
-                }
-            };
-            reader.readAsText(file);
-            input.value = '';
-        }
-
-        function renderBreadcrumbs() {
-            const container = document.getElementById('breadcrumbs');
-            container.innerHTML = '';
-            
-            navigationHistory.forEach((folder, index) => {
-                const isLast = index === navigationHistory.length - 1;
-                if (index > 0) {
-                    container.appendChild(document.createTextNode(' / '));
-                }
-                
-                const span = document.createElement('button');
-                span.textContent = folder.name;
-                if (!isLast) {
-                    span.className = 'nav-link';
-                    span.onclick = () => navigateTo(index);
-                } else {
-                    span.style.cssText = "background:none;border:none;color:white;padding:0;font-size:14px;font-weight:bold;";
-                }
-                container.appendChild(span);
-            });
-        }
-
-        function renderGrid() {
-            const grid = document.getElementById('folder-grid');
-            grid.innerHTML = ''; 
-            
-            renderBreadcrumbs();
-            updateControlButtons();
-
-            const currentFolder = getCurrentFolder();
-
-            if (!currentFolder.children || currentFolder.children.length === 0) {
-                grid.innerHTML = `<p style="color: var(--text-dim);">This directory is empty.</p>`;
-                return;
-            }
-
-            currentFolder.children.forEach(item => {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'card-container';
-
-                const square = document.createElement('button');
-                square.className = 'grid-item';
-                
-                if (movingItemPointer && movingItemPointer.id === item.id) {
-                    square.classList.add('moving');
-                }
-
-                const delBtn = document.createElement('button');
-                delBtn.className = 'btn-delete';
-                delBtn.innerHTML = '✕';
-                delBtn.title = 'Delete';
-                delBtn.onclick = (e) => deleteItem(item.id, e);
-
-                const moveBtn = document.createElement('button');
-                moveBtn.className = 'btn-move';
-                moveBtn.innerHTML = '⤳';
-                moveBtn.title = 'Move';
-                moveBtn.onclick = (e) => startMoveItem(item, e);
-
-                if (item.type === 'folder') {
-                    square.onclick = () => enterFolder(item);
-                    square.innerHTML = `
-                        <div class="icon folder-icon">📁</div>
-                        <div class="item-name">${item.name}</div>
-                    `;
-                } else if (item.type === 'file') {
-                    square.onclick = () => openEditor(item);
-                    square.innerHTML = `
-                        <div class="icon file-icon">📄</div>
-                        <div class="item-name">${item.name}</div>
-                    `;
-                }
-
-                wrapper.appendChild(square);
-                wrapper.appendChild(delBtn);
-                wrapper.appendChild(moveBtn);
-                grid.appendChild(wrapper);
-            });
-        }
-
-        renderGrid();
-    </script>
-</body>
-</html>
