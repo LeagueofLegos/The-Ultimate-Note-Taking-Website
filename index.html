@@ -562,7 +562,7 @@
             reader.readAsDataURL(file);
         }
 
-        // Deep database crawling function targeting paths for instant selection routing
+	// Deep database crawling function targeting paths for instant selection routing
         function handleGlobalSearch() {
             const query = document.getElementById('searchBar').value.toLowerCase().trim();
             const resultsPane = document.getElementById('search-results');
@@ -591,18 +591,20 @@
                 resultsList.innerHTML = `<p style="color: var(--text-dim); font-size: 14px;">No files or folders match your query.</p>`;
             } else {
                 matches.forEach(match => {
-                    const div = document.createElement('div');
-                    div.className = 'search-result-item';
+                    // CHANGED: Use a native button element instead of a div so it registers as an interactive element
+                    const btn = document.createElement('button');
+                    btn.className = 'search-result-item';
+                    btn.style.cssText = "width: 100%; text-align: left; background: none; border: none; font-family: inherit; color: inherit;";
                     
                     const pathString = match.path.map(p => p.name).join(' ➔ ');
                     const typeIcon = match.item.type === 'folder' ? '📁' : '📄';
                     
-                    div.innerHTML = `
+                    btn.innerHTML = `
                         <div><strong>${typeIcon} ${match.item.name}</strong></div>
                         <div class="search-path">${pathString}</div>
                     `;
                     
-                    div.onclick = () => {
+                    btn.onclick = () => {
                         navigationHistory = match.path.slice(0, -1);
                         document.getElementById('searchBar').value = '';
                         resultsPane.classList.add('hidden');
@@ -614,7 +616,7 @@
                             openEditor(match.item);
                         }
                     };
-                    resultsList.appendChild(div);
+                    resultsList.appendChild(btn);
                 });
             }
             resultsPane.classList.remove('hidden');
