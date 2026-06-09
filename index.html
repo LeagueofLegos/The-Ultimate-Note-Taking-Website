@@ -356,7 +356,7 @@
                 appData = parsed;
                 if (!appData.backgroundImage) appData.backgroundImage = "";
             } else {
-                throw new Error("Upgrade structure matrix layout configuration trackers");
+                throw new Error("Upgrade structure fallback configuration layout tracking records");
             }
         } catch(e) {
             appData = {
@@ -551,7 +551,6 @@
             buildInfiniteGridCanvasMatrixHTML();
         }
 
-        // NEW FEATURE: Shrink canvas dimensions by purging target column or row parameters
         function shrinkInfiniteCanvasDimension(dimension) {
             if (!activeFilePointer) return;
             
@@ -560,7 +559,6 @@
                 const targetRowIdx = activeFilePointer.gridRowsCount - 1;
                 if (!confirm(`Are you sure you want to delete Row ${targetRowIdx + 1}? All cell notes in this row will be permanently lost.`)) return;
                 
-                // Scrub tracking index values cleanly out of matrix map allocations
                 for (let c = 0; c < activeFilePointer.gridColsCount; c++) {
                     delete activeFilePointer.canvasMatrix[`${targetRowIdx}_${c}`];
                 }
@@ -580,7 +578,7 @@
 
             saveData();
             buildInfiniteGridCanvasMatrixHTML();
-            document.getElementById('markdown-preview').innerHTML = ''; // Flush layout preview feed
+            document.getElementById('markdown-preview').innerHTML = ''; 
         }
 
         function updateLivePreviewFromActiveFocusCell(text) {
@@ -835,19 +833,74 @@
             document.body.appendChild(a); a.click(); a.remove();
         }
 
+        // NEW RECURSIVE ENGINE: Traverses tree nodes to merge incoming data arrays without clearing matches
+        function deepMergeNoteTrees(targetNode, sourceNode) {
+            if (!sourceNode.children) return;
+            if (!targetNode.children) targetNode.children = [];
+
+            sourceNode.children.forEach(sourceChild => {
+                // Find node item sharing the exact same name descriptor value match
+                let matchingTargetChild = targetNode.children.find(
+                    tChild => tChild.name.toLowerCase() === sourceChild.name.toLowerCase() && tChild.type === sourceChild.type
+                );
+
+                if (matchingTargetChild) {
+                    if (sourceChild.type === 'folder') {
+                        deepMergeNoteTrees(matchingTargetChild, sourceChild);
+                    } else if (sourceChild.type === 'file') {
+                        // Check structural identity properties: contents or spreadsheet matrix definitions
+                        const textContentIdentical = matchingTargetChild.content === sourceChild.content;
+                        const canvasMatrixIdentical = JSON.stringify(matchingTargetChild.canvasMatrix) === JSON.stringify(sourceChild.canvasMatrix);
+                        
+                        if (!textContentIdentical || !canvasMatrixIdentical) {
+                            // Elements match names but harbor divergent text fields -> assign timestamp to prevent content losses
+                            const uniqueClonedChild = JSON.parse(JSON.stringify(sourceChild));
+                            uniqueClonedChild.id = sourceChild.type + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                            uniqueClonedChild.name = `${sourceChild.name} (Imported Backup)`;
+                            targetNode.children.push(uniqueClonedChild);
+                        }
+                    } else if (sourceChild.type === 'link') {
+                        if (matchingTargetChild.url !== sourceChild.url) {
+                            const clonedLink = JSON.parse(JSON.stringify(sourceChild));
+                            clonedLink.id = 'link_' + Date.now();
+                            targetNode.children.push(clonedLink);
+                        }
+                    }
+                } else {
+                    // Element exhibits an completely unique structural label -> inject cleanly directly into folder arrays
+                    const freshNodeCopy = JSON.parse(JSON.stringify(sourceChild));
+                    targetNode.children.push(freshNodeCopy);
+                }
+            });
+        }
+
         function importMetadata(input) {
             const file = input.files[0]; if (!file) return;
             const r = new FileReader();
             r.onload = function(e) {
                 try {
                     const parsed = JSON.parse(e.target.result);
-                    if (parsed.notebooks) {
-                        appData = parsed; navigationHistory = [appData.notebooks];
-                        document.body.style.backgroundImage = appData.backgroundImage ? `url('${appData.backgroundImage}')` : 'none';
-                        cancelMove(); saveData(); renderGrid();
-                        alert("Data imported successfully!");
+                    if (parsed && parsed.notebooks) {
+                        // Launch strategic branch reconciliation mapping sequence
+                        deepMergeNoteTrees(appData.notebooks, parsed.notebooks);
+                        
+                        // Retain active art profile attributes if target profile does not have canvas overrides
+                        if (!appData.backgroundImage && parsed.backgroundImage) {
+                            appData.backgroundImage = parsed.backgroundImage;
+                            document.body.style.backgroundImage = `url('${parsed.backgroundImage}')`;
+                        }
+                        
+                        navigationHistory = [appData.notebooks];
+                        cancelMove(); 
+                        saveData(); 
+                        renderGrid();
+                        alert("Note database synchronization and merge complete! Duplicate items skipped.");
+                    } else {
+                        alert("Invalid backup structure format.");
                     }
-                } catch (err) { alert("Invalid backup structure."); }
+                } catch (err) { 
+                    alert("Error processing JSON metadata configuration values."); 
+                }
             };
             r.readAsText(file); input.value = '';
         }
