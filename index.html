@@ -186,68 +186,30 @@
         }
         .editor-pane:focus { border-color: var(--accent-color); }
 
+        /* NEW FEATURE: TRUE INFINITE SHEET CELL CANVAS SPREAD GRID ENGINE */
+        .infinite-grid-canvas {
+            width: 100%; height: 100%; background-color: var(--dustloop-dark); border: 2px solid var(--dustloop-border);
+            border-radius: 0 0 6px 6px; overflow: auto; box-sizing: border-box; padding: 10px;
+        }
+        .infinite-grid-table-layout {
+            border-collapse: collapse; table-layout: fixed; width: max-content;
+        }
+        .infinite-grid-table-layout td {
+            border: 1px solid var(--dustloop-border); padding: 0; width: 120px; min-width: 120px; max-width: 120px; height: 35px; background-color: #111115;
+        }
+        .cell-textarea-input {
+            width: 100%; height: 100%; background: transparent; border: none; color: #fff; padding: 6px;
+            font-size: 14px; font-family: inherit; outline: none; box-sizing: border-box; resize: none; overflow: hidden; white-space: nowrap;
+        }
+        .cell-textarea-input:focus {
+            background-color: rgba(255, 183, 3, 0.15); border: 1px solid var(--accent-color);
+        }
+
         .preview-pane { background-color: var(--panel-color); border: 2px solid var(--dustloop-border); border-radius: 0 0 6px 6px; padding: 20px; box-sizing: border-box; overflow-y: auto; height: 100%; }
         .preview-pane h1 { font-size: 1.8em; border-bottom: 2px solid var(--accent-color); padding-bottom: 5px; margin-top: 0; color: white; }
         .preview-pane h2 { font-size: 1.4em; border-bottom: 1px solid var(--dustloop-border); padding-bottom: 5px; color: var(--accent-color); }
         .preview-pane h3 { font-size: 1.1em; color: #e2e2e7; margin-top: 15px; }
         .preview-pane a { color: var(--accent-color); text-decoration: underline; cursor: pointer; }
-
-        /* NEW FEATURE: Spreadsheet Style Interactive Table Layout Grid */
-        .spreadsheet-container {
-            background-color: var(--dustloop-dark);
-            border: 2px solid var(--dustloop-border);
-            border-radius: 0 0 6px 6px;
-            height: 100%;
-            overflow: auto;
-            box-sizing: border-box;
-            padding: 10px;
-        }
-        .sheet-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-            color: #fff;
-        }
-        .sheet-table th {
-            background-color: var(--panel-color);
-            color: var(--accent-color);
-            text-align: left;
-            padding: 10px;
-            font-weight: bold;
-            border: 1px solid var(--dustloop-border);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        .sheet-table td {
-            border: 1px solid var(--dustloop-border);
-            padding: 4px;
-            background-color: #111115;
-        }
-        .sheet-input {
-            width: 100%;
-            background: transparent;
-            border: none;
-            color: #fff;
-            padding: 6px;
-            font-size: 14px;
-            font-family: inherit;
-            outline: none;
-            box-sizing: border-box;
-        }
-        .sheet-input:focus {
-            background-color: rgba(255, 183, 3, 0.15);
-        }
-        .sheet-action-btn {
-            background: none;
-            border: none;
-            color: var(--danger-color);
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            width: 100%;
-            text-align: center;
-        }
 
         .video-overlay-modal {
             position: absolute; top: 45px; right: 20px; width: 420px; height: calc(100% - 65px);
@@ -264,9 +226,6 @@
         }
         .suggestion-item { padding: 8px 12px; cursor: pointer; font-family: monospace; font-size: 14px; }
         .suggestion-item:hover, .suggestion-item.active { background: var(--accent-color); color: var(--dustloop-dark); font-weight: bold; }
-
-        .editor-search-row { display: flex; gap: 8px; background: var(--panel-color); padding: 8px; border: 2px solid var(--dustloop-border); border-bottom: none; border-radius: 4px 4px 0 0; }
-        .editor-search-input { background: #000; border: 1px solid #444; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 13px; flex: 1; }
 
         .help-panel { background-color: var(--panel-color); border: 2px solid var(--dustloop-border); border-radius: 6px; padding: 12px; font-size: 13px; }
         .help-title { font-weight: bold; color: var(--accent-color); cursor: pointer; display: flex; justify-content: space-between; }
@@ -308,6 +267,7 @@
         <header>
             <h1 id="editor-file-title">Editing File</h1>
             <div class="controls">
+                <button class="btn btn-main" id="toggle-editor-mode-btn" style="border-color: var(--accent-color); color: var(--accent-color);" onclick="switchLeftPaneEditorMode()">📊 Toggle Editor to Sheets Grid</button>
                 <button class="btn btn-main" style="border-color:#2196f3; color:#2196f3;" onclick="toggleLabVideoPlayer()">🎬 Open Lab Video Player</button>
                 <button class="btn btn-main" onclick="closeEditor()">Save & Exit</button>
             </div>
@@ -316,43 +276,30 @@
         <div class="editor-layout">
             <div class="workspace-dual-grid">
                 
-                <div class="pane-wrapper" style="position: relative;">
-                    <div class="editor-search-row">
-                        <input type="text" id="editor-search-input" class="editor-search-input" placeholder="Find text inside file..." onkeydown="handleEditorSearch(event)">
-                        <button class="btn" style="padding: 2px 10px; font-size:11px;" onclick="executeEditorSearchNext()">Next</button>
-                    </div>
-                    <textarea id="markdown-input" class="editor-pane" placeholder="Type Markdown notes or combo logs here..." oninput="handleEditorInput(event)" onkeydown="handleEditorKeydowns(event)"></textarea>
+                <div class="pane-wrapper" id="left-pane-text-wrapper">
+                    <div class="pane-header">RAW WORKSPACE SPECIFICATION ENGINE</div>
+                    <textarea id="markdown-input" class="editor-pane" placeholder="Type Markdown here..." oninput="handleEditorInput(event)" onkeydown="handleEditorKeydowns(event)"></textarea>
                     <div id="autocomplete-box" class="autocomplete-suggestions"></div>
                 </div>
 
-                <div class="pane-wrapper">
+                <div class="pane-wrapper hidden" id="left-pane-grid-wrapper">
                     <div class="pane-header">
-                        <span id="preview-header-title">LIVE PREVIEW</span>
-                        <div>
-                            <button class="btn btn-main" id="toggle-view-mode-btn" style="padding: 2px 10px; font-size:11px; background:#121216;" onclick="switchRightPaneViewMode()">📊 Toggle to Spreadsheet Grid</button>
+                        <span>INFINITE SHEET CANVAS INPUT GRID</span>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn" style="padding: 1px 8px; font-size: 11px;" onclick="expandInfiniteCanvasDimension('row')">+ Row</button>
+                            <button class="btn" style="padding: 1px 8px; font-size: 11px;" onclick="expandInfiniteCanvasDimension('col')">+ Column</button>
                         </div>
                     </div>
-                    
-                    <div id="markdown-preview" class="preview-pane"></div>
-                    
-                    <div id="grid-preview" class="spreadsheet-container hidden">
-                        <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size:12px; font-weight:bold; color:var(--text-dim);">SPREADSHEET ENGINE MODE ACTIVE</span>
-                            <button class="btn btn-main" style="padding: 4px 10px; font-size:12px;" onclick="addSpreadsheetRow()">+ Insert Row</button>
-                        </div>
-                        <table class="sheet-table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 40%;">Combo Input String</th>
-                                    <th style="width: 15%;">Damage</th>
-                                    <th style="width: 15%;">Startup / Specs</th>
-                                    <th style="width: 25%;">Execution Notes</th>
-                                    <th style="width: 5%; text-align: center;">✕</th>
-                                </tr>
-                            </thead>
-                            <tbody id="spreadsheet-rows-body"></tbody>
+                    <div class="infinite-grid-canvas">
+                        <table class="infinite-grid-table-layout">
+                            <tbody id="infinite-canvas-matrix-body"></tbody>
                         </table>
                     </div>
+                </div>
+
+                <div class="pane-wrapper">
+                    <div class="pane-header">LIVE PREVIEW ENGINE RENDERING FEED</div>
+                    <div id="markdown-preview" class="preview-pane"></div>
                 </div>
 
             </div>
@@ -397,9 +344,6 @@
         let activeFilePointer = null; 
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
-        
-        let searchIndexTracker = 0;
-        let searchMatchesArray = [];
 
         const notationSuggestions = ["2A > ", "5A > ", "2B > ", "5B > ", "2C > ", "5C > ", "j.A > ", "j.B > ", "j.C > ", "iad ", "dl.", "ch > "];
         let activeSuggestionIndex = 0;
@@ -410,7 +354,7 @@
                 appData = parsed;
                 if (!appData.backgroundImage) appData.backgroundImage = "";
             } else {
-                throw new Error("Upgrade structure");
+                throw new Error("Upgrade structure fallback configuration layout tracking records");
             }
         } catch(e) {
             appData = {
@@ -453,8 +397,10 @@
                 if (!destination) return;
                 newItem.url = destination.trim();
             } else {
-                newItem.viewMode = 'markdown'; // Mode options: 'markdown' or 'grid'
-                newItem.sheetRows = [];        // Clean row database collection matrix
+                newItem.editorMode = 'text'; // Mode options: 'text' or 'grid'
+                newItem.gridRowsCount = 4;   // Initial row boundary dimension counts
+                newItem.gridColsCount = 4;   // Initial column boundary dimension counts
+                newItem.canvasMatrix = {};   // Flat spatial key value structural repository map
                 newItem.content = "# " + newItem.name + "\n## Notes\n- Add technical insights here...";
             }
 
@@ -513,16 +459,18 @@
         function openEditor(fileItem) {
             activeFilePointer = fileItem;
             
-            // Runtime fallbacks to keep structures safe
-            if (!activeFilePointer.viewMode) activeFilePointer.viewMode = 'markdown';
-            if (!activeFilePointer.sheetRows) activeFilePointer.sheetRows = [];
+            // Core database version fallback configuration rules
+            if (!activeFilePointer.editorMode) activeFilePointer.editorMode = 'text';
+            if (!activeFilePointer.gridRowsCount) activeFilePointer.gridRowsCount = 4;
+            if (!activeFilePointer.gridColsCount) activeFilePointer.gridColsCount = 4;
+            if (!activeFilePointer.canvasMatrix) activeFilePointer.canvasMatrix = {};
 
             document.getElementById('editor-file-title').textContent = `EDITING FILE // ${fileItem.name.toUpperCase()}`;
             document.getElementById('markdown-input').value = fileItem.content;
             document.getElementById('browser-view').classList.add('hidden');
             document.getElementById('editor-view').classList.remove('hidden');
             
-            applyEditorPaneDisplaySettings();
+            applyLeftPaneDisplaySettings();
         }
 
         function closeEditor() {
@@ -537,81 +485,86 @@
             renderGrid();
         }
 
-        function switchRightPaneViewMode() {
+        // SWAP WORKSPACE LAYOUT PANELS INTERFACES
+        function switchLeftPaneEditorMode() {
             if (!activeFilePointer) return;
-            activeFilePointer.viewMode = activeFilePointer.viewMode === 'markdown' ? 'grid' : 'markdown';
-            applyEditorPaneDisplaySettings();
+            activeFilePointer.editorMode = activeFilePointer.editorMode === 'text' ? 'grid' : 'text';
+            applyLeftPaneDisplaySettings();
         }
 
-        function applyEditorPaneDisplaySettings() {
-            const modeBtn = document.getElementById('toggle-view-mode-btn');
-            const mdPreview = document.getElementById('markdown-preview');
-            const gridPreview = document.getElementById('grid-preview');
-            const headerTitle = document.getElementById('preview-header-title');
+        function applyLeftPaneDisplaySettings() {
+            const modeBtn = document.getElementById('toggle-editor-mode-btn');
+            const textWrapper = document.getElementById('left-pane-text-wrapper');
+            const gridWrapper = document.getElementById('left-pane-grid-wrapper');
 
-            if (activeFilePointer.viewMode === 'grid') {
-                modeBtn.textContent = "📄 Switch to Markdown Notes View";
-                headerTitle.textContent = "SPREADSHEET DATASHEET GRID";
-                mdPreview.classList.add('hidden');
-                gridPreview.classList.remove('hidden');
-                renderSpreadsheetEngineRows();
+            if (activeFilePointer.editorMode === 'grid') {
+                modeBtn.textContent = "📄 Toggle Editor to Text Mode";
+                textWrapper.classList.add('hidden');
+                gridWrapper.classList.remove('hidden');
+                buildInfiniteGridCanvasMatrixHTML();
             } else {
-                modeBtn.textContent = "📊 Switch to Spreadsheet Grid View";
-                headerTitle.textContent = "DOCUMENT PREVIEW MODE";
-                gridPreview.classList.add('hidden');
-                mdPreview.classList.remove('hidden');
+                modeBtn.textContent = "📊 Toggle Editor to Sheets Grid";
+                gridWrapper.classList.add('hidden');
+                textWrapper.classList.remove('hidden');
                 updateLivePreview();
             }
         }
 
-        // SPREADSHEET ENGINE MANAGEMENT METHODS
-        function renderSpreadsheetEngineRows() {
-            const tbody = document.getElementById('spreadsheet-rows-body');
+        // INFINITE EXCEL CELL MATRIX CANVAS INJECTION LOOPS
+        function buildInfiniteGridCanvasMatrixHTML() {
+            const tbody = document.getElementById('infinite-canvas-matrix-body');
             tbody.innerHTML = '';
 
-            if (activeFilePointer.sheetRows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-dim); text-align:center; padding:20px;">No row vectors initialized inside this sheet module. Click insert above to begin.</td></tr>`;
-                return;
-            }
-
-            activeFilePointer.sheetRows.forEach((row, index) => {
+            for (let r = 0; r < activeFilePointer.gridRowsCount; r++) {
                 const tr = document.createElement('tr');
-                
-                tr.innerHTML = `
-                    <td><input type="text" class="sheet-input" value="${row.combo || ''}" data-field="combo" placeholder="e.g., 2A > 5B > 3C..."></td>
-                    <td><input type="text" class="sheet-input" value="${row.damage || ''}" data-field="damage" placeholder="e.g., 2430"></td>
-                    <td><input type="text" class="sheet-input" value="${row.specs || ''}" data-field="specs" placeholder="e.g., Midscreen / 5f"></td>
-                    <td><input type="text" class="sheet-input" value="${row.notes || ''}" data-field="notes" placeholder="e.g., Delay micro-dash link..."></td>
-                    <td><button class="sheet-action-btn">✕</button></td>
-                `;
+                for (let c = 0; c < activeFilePointer.gridColsCount; c++) {
+                    const td = document.createElement('td');
+                    const cellKey = `${r}_${c}`;
+                    const cellValue = activeFilePointer.canvasMatrix[cellKey] || '';
 
-                // Sync data directly to target local memory references on key entries
-                tr.querySelectorAll('.sheet-input').forEach(input => {
-                    input.oninput = (e) => {
-                        const field = e.target.getAttribute('data-field');
-                        activeFilePointer.sheetRows[index][field] = e.target.value;
+                    const cellInput = document.createElement('textarea');
+                    cellInput.className = 'cell-textarea-input';
+                    cellInput.value = cellValue;
+                    cellInput.placeholder = '...';
+                    
+                    cellInput.oninput = (e) => {
+                        activeFilePointer.canvasMatrix[cellKey] = e.target.value;
                         saveData();
+                        updateLivePreviewFromActiveFocusCell(e.target.value);
                     };
-                });
 
-                tr.querySelector('.sheet-action-btn').onclick = () => {
-                    activeFilePointer.sheetRows.splice(index, 1);
-                    saveData();
-                    renderSpreadsheetEngineRows();
-                };
+                    cellInput.onfocus = (e) => {
+                        updateLivePreviewFromActiveFocusCell(e.target.value);
+                    };
 
+                    td.appendChild(cellInput);
+                    tr.appendChild(td);
+                }
                 tbody.appendChild(tr);
-            });
+            }
         }
 
-        function addSpreadsheetRow() {
+        function expandInfiniteCanvasDimension(dimension) {
             if (!activeFilePointer) return;
-            activeFilePointer.sheetRows.push({ combo: '', damage: '', specs: '', notes: '' });
+            if (dimension === 'row') activeFilePointer.gridRowsCount++;
+            if (dimension === 'col') activeFilePointer.gridColsCount++;
             saveData();
-            renderSpreadsheetEngineRows();
+            buildInfiniteGridCanvasMatrixHTML();
+        }
+
+        function updateLivePreviewFromActiveFocusCell(text) {
+            const previewPane = document.getElementById('markdown-preview');
+            let html = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+            html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+            html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+            html = html.replace(/^\s*-\s*(.*$)/gim, '<li>$1</li>');
+            html = html.replace(/\n/g, '<br>');
+            previewPane.innerHTML = html;
         }
 
         function updateLivePreview() {
+            if (activeFilePointer && activeFilePointer.editorMode === 'grid') return;
             const rawText = document.getElementById('markdown-input').value;
             const previewPane = document.getElementById('markdown-preview');
             
@@ -656,33 +609,6 @@
         function adjustVideoTime(seconds) {
             const player = document.getElementById('lab-video-player');
             if (player) player.currentTime += seconds;
-        }
-
-        function handleEditorSearch(event) {
-            if (event.key === 'Enter') {
-                const term = document.getElementById('editor-search-input').value.toLowerCase();
-                const text = document.getElementById('markdown-input').value.toLowerCase();
-                searchMatchesArray = [];
-                searchIndexTracker = 0;
-
-                if (!term) return;
-
-                let idx = text.indexOf(term);
-                while (idx !== -1) {
-                    searchMatchesArray.push(idx);
-                    idx = text.indexOf(term, idx + 1);
-                }
-                executeEditorSearchNext();
-            }
-        }
-
-        function executeEditorSearchNext() {
-            if (searchMatchesArray.length === 0) return;
-            const pos = searchMatchesArray[searchIndexTracker];
-            const editor = document.getElementById('markdown-input');
-            editor.focus();
-            editor.setSelectionRange(pos, pos + document.getElementById('editor-search-input').value.length);
-            searchIndexTracker = (searchIndexTracker + 1) % searchMatchesArray.length;
         }
 
         function handleEditorInput(event) {
