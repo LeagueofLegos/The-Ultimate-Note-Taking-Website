@@ -202,8 +202,8 @@
         .btn-move:hover { background-color: var(--move-color); color: white; border-color: var(--move-color); }
 
         /* Multi-Pane Workspace Layout */
-        .editor-layout { display: flex; flex-direction: column; gap: 15px; height: calc(100vh - 140px); margin-top: 15px; }
-        .workspace-triple-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; flex: 1; min-height: 0; }
+        .editor-layout { display: flex; flex-direction: column; gap: 15px; height: calc(100vh - 140px); margin-top: 15px; position: relative; }
+        .workspace-dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; min-height: 0; }
         
         .pane-wrapper { display: flex; flex-direction: column; height: 100%; min-height: 0; }
         .pane-header { background: var(--dustloop-dark); padding: 6px 12px; border: 2px solid var(--dustloop-border); border-bottom: none; border-radius: 4px 4px 0 0; font-size: 12px; font-weight: bold; color: var(--accent-color); }
@@ -221,8 +221,13 @@
         .preview-pane h3 { font-size: 1.1em; color: #e2e2e7; margin-top: 15px; }
         .preview-pane a { color: var(--accent-color); text-decoration: underline; cursor: pointer; }
 
-        /* Lab Video Component Workspace Styles */
-        .video-pane { background-color: var(--dustloop-dark); border: 2px solid var(--dustloop-border); border-radius: 0 0 6px 6px; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; height: 100%; }
+        /* Toggleable Overlay Panel for the Lab Video System */
+        .video-overlay-modal {
+            position: absolute; top: 45px; right: 20px; width: 420px; height: calc(100% - 65px);
+            background-color: var(--dustloop-dark); border: 2px solid var(--accent-color);
+            border-radius: 6px; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column;
+            gap: 10px; z-index: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
         .video-element { width: 100%; background: #000; border-radius: 4px; flex: 1; min-height: 0; object-fit: contain; }
         .video-input { width: 100%; padding: 8px; background: #000; border: 1px solid var(--dustloop-border); color: #fff; border-radius: 4px; box-sizing: border-box; }
 
@@ -279,12 +284,13 @@
         <header>
             <h1 id="editor-file-title">Editing File</h1>
             <div class="controls">
+                <button class="btn btn-main" style="border-color:#2196f3; color:#2196f3;" onclick="toggleLabVideoPlayer()">🎬 Open Lab Video Player</button>
                 <button class="btn btn-main" onclick="closeEditor()">Save & Exit</button>
             </div>
         </header>
         
         <div class="editor-layout">
-            <div class="workspace-triple-grid">
+            <div class="workspace-dual-grid">
                 
                 <div class="pane-wrapper" style="position: relative;">
                     <div class="editor-search-row">
@@ -300,24 +306,25 @@
                     <div id="markdown-preview" class="preview-pane"></div>
                 </div>
 
-                <div class="pane-wrapper">
-                    <div class="pane-header">LAB VIDEO PLAYER (FRAME NOTATION FEED)</div>
-                    <div class="video-pane">
-                        <input type="text" id="video-url-src" class="video-input" placeholder="Paste .mp4 link / select local file..." onchange="loadVideoSource(this.value)">
-                        <input type="file" id="local-video-loader" style="display:none;" accept="video/*" onchange="loadLocalVideoFile(this)">
-                        <button class="btn btn-utility" style="padding:4px;" onclick="document.getElementById('local-video-loader').click()">Open Local MP4 File</button>
-                        
-                        <video id="lab-video-player" class="video-element" controls></video>
-                        
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-                            <button class="btn" onclick="adjustVideoTime(-1)">◀ -1s</button>
-                            <button class="btn" onclick="adjustVideoTime(1)">+1s ▶</button>
-                            <button class="btn" onclick="adjustVideoTime(-5)">◀◀ -5s</button>
-                            <button class="btn" onclick="adjustVideoTime(5)">+5s ▶▶</button>
-                        </div>
-                    </div>
-                </div>
+            </div>
 
+            <div id="floating-video-panel" class="video-overlay-modal hidden">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--dustloop-border); padding-bottom:4px;">
+                    <span style="font-size:12px; font-weight:bold; color:var(--accent-color);">LAB FRAME ADVANCEMENT FEED</span>
+                    <button class="btn" style="padding:2px 8px; font-size:11px; background:var(--danger-color); border:none;" onclick="toggleLabVideoPlayer()">✕ Close</button>
+                </div>
+                <input type="text" id="video-url-src" class="video-input" placeholder="Paste .mp4 link / select local file..." onchange="loadVideoSource(this.value)">
+                <input type="file" id="local-video-loader" style="display:none;" accept="video/*" onchange="loadLocalVideoFile(this)">
+                <button class="btn btn-utility" style="padding:4px; font-size:12px;" onclick="document.getElementById('local-video-loader').click()">Open Local MP4 File</button>
+                
+                <video id="lab-video-player" class="video-element" controls></video>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+                    <button class="btn" onclick="adjustVideoTime(-1)">◀ -1s</button>
+                    <button class="btn" onclick="adjustVideoTime(1)">+1s ▶</button>
+                    <button class="btn" onclick="adjustVideoTime(-5)">◀◀ -5s</button>
+                    <button class="btn" onclick="adjustVideoTime(5)">+5s ▶ Res</button>
+                </div>
             </div>
 
             <div class="help-panel">
@@ -342,11 +349,9 @@
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
         
-        // Editor Search Tracking Pointer Positions
         let searchIndexTracker = 0;
         let searchMatchesArray = [];
 
-        // Automation Auto-Complete Suggestions Array Registry
         const notationSuggestions = ["2A > ", "5A > ", "2B > ", "5B > ", "2C > ", "5C > ", "j.A > ", "j.B > ", "j.C > ", "iad ", "dl.", "ch > "];
         let activeSuggestionIndex = 0;
 
@@ -356,7 +361,7 @@
                 appData = parsed;
                 if (!appData.backgroundImage) appData.backgroundImage = "";
             } else {
-                throw new Error("Data upgrade structural rebuild needed");
+                throw new Error("Upgrade configuration structural matrices");
             }
         } catch(e) {
             appData = {
@@ -398,7 +403,7 @@
             } else if (type === 'grid') {
                 newItem.entries = [];
             } else if (type === 'link') {
-                const destination = prompt("Enter target URL (e.g., https://example.com):");
+                const destination = prompt("Enter target URL:");
                 if (!destination) return;
                 newItem.url = destination.trim();
             } else {
@@ -446,6 +451,7 @@
             renderGrid();
         }
 
+        gridItem = null;
         function isDescendant(parentFolder, targetFolder) {
             if (parentFolder.type !== 'folder' || !parentFolder.children) return false;
             for (let child of parentFolder.children) {
@@ -498,6 +504,7 @@
                 saveData();
             }
             activeFilePointer = null;
+            document.getElementById('floating-video-panel').classList.add('hidden'); 
             document.getElementById('editor-view').classList.add('hidden');
             document.getElementById('browser-view').classList.remove('hidden');
             renderGrid();
@@ -513,8 +520,6 @@
             html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
             html = html.replace(/^\s*-\s*(.*$)/gim, '<li>$1</li>');
             html = html.replace(/^\s*\*\s*(.*$)/gim, '<li>$1</li>');
-            
-            // Re-render hyperlinked tags securely to intercept configuration mappings on click
             html = html.replace(/\[(.*?)\]\((.*?)\)/gim, '<a onclick="handleMarkdownLinkClick(\'$2\', event)">$1</a>');
             html = html.replace(/\n/g, '<br>');
 
@@ -522,14 +527,13 @@
             previewPane.innerHTML = html;
         }
 
-        // Feature Intercept Hook: Click links inside preview pane to execute mutations
         function handleMarkdownLinkClick(url, event) {
             event.preventDefault();
-            const choice = confirm(`Link clicked: ${url}\n\n[OK] -> Open URL in split target browser window\n[Cancel] -> Edit link structure text parameters`);
+            const choice = confirm(`Link clicked: ${url}\n\n[OK] -> Open URL\n[Cancel] -> Edit link`);
             if (choice) {
                 window.open(url, '_blank');
             } else {
-                const newUrl = prompt("Modify Destination Link String Pointer Target:", url);
+                const newUrl = prompt("Modify Destination Link String:", url);
                 if (newUrl && newUrl.trim() !== "") {
                     const editor = document.getElementById('markdown-input');
                     editor.value = editor.value.replace(url, newUrl.trim());
@@ -538,7 +542,11 @@
             }
         }
 
-        // Workspace Lab Video Step Adjustment Automation Actions
+        function toggleLabVideoPlayer() {
+            const overlay = document.getElementById('floating-video-panel');
+            overlay.classList.toggle('hidden');
+        }
+
         function loadVideoSource(url) { if (url) document.getElementById('lab-video-player').src = url; }
         function loadLocalVideoFile(input) {
             const file = input.files[0];
@@ -549,9 +557,8 @@
             if (player) player.currentTime += seconds;
         }
 
-        // Active Document Editor Context Search Execution Mechanics
-        function handleEditorSearch(e) {
-            if (e.key === 'Enter') {
+        function handleEditorSearch(event) {
+            if (event.key === 'Enter') {
                 const term = document.getElementById('editor-search-input').value.toLowerCase();
                 const text = document.getElementById('markdown-input').value.toLowerCase();
                 searchMatchesArray = [];
@@ -577,10 +584,9 @@
             searchIndexTracker = (searchIndexTracker + 1) % searchMatchesArray.length;
         }
 
-        // Custom Automation Auto-Complete Script Triggers
-        function handleEditorInput(e) {
+        function handleEditorInput(event) {
             updateLivePreview();
-            const editor = e.target;
+            const editor = event.target;
             const val = editor.value;
             const cursor = editor.selectionStart;
             
@@ -603,30 +609,29 @@
                 box.appendChild(div);
             });
 
-            // Adjust coordination fields relative to screen viewframes
             box.style.display = 'block';
             box.style.left = '20px';
-            box.style.bottom = '60px';
+            box.style.bottom = '20px';
         }
 
-        function handleEditorKeydowns(e) {
+        function handleEditorKeydowns(event) {
             const box = document.getElementById('autocomplete-box');
             if (box.style.display === 'block') {
                 const items = box.getElementsByClassName('suggestion-item');
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
                     items[activeSuggestionIndex].classList.remove('active');
                     activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
                     items[activeSuggestionIndex].classList.add('active');
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
                     items[activeSuggestionIndex].classList.remove('active');
                     activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
                     items[activeSuggestionIndex].classList.add('active');
-                } else if (e.key === 'Tab' || e.key === 'Enter') {
-                    e.preventDefault();
+                } else if (event.key === 'Tab' || event.key === 'Enter') {
+                    event.preventDefault();
                     items[activeSuggestionIndex].click();
-                } else if (e.key === 'Escape') {
+                } else if (event.key === 'Escape') {
                     box.style.display = 'none';
                 }
             }
