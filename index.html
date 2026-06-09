@@ -163,15 +163,19 @@
         .link-icon { color: #e74c3c; }
         .item-name { font-weight: 600; font-size: 16px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        .btn-delete, .btn-move {
-            position: absolute; top: 8px; background: rgba(0, 0, 0, 0.6); border: 1px solid #444;
+        .btn-delete, .btn-move, .btn-rename {
+            position: absolute; background: rgba(0, 0, 0, 0.6); border: 1px solid #444;
             color: #aaa; border-radius: 4px; width: 24px; height: 24px; cursor: pointer;
             font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 10;
         }
-        .btn-delete { right: 8px; }
+        .btn-delete { top: 8px; right: 8px; }
         .btn-delete:hover { background-color: var(--danger-color); color: white; border-color: var(--danger-color); }
-        .btn-move { left: 8px; font-size: 14px; }
+        .btn-move { top: 8px; left: 8px; font-size: 14px; }
         .btn-move:hover { background-color: var(--move-color); color: white; border-color: var(--move-color); }
+        
+        /* NEW OVERLAY BUTTON: Aligned dynamically alongside delete handles */
+        .btn-rename { top: 8px; right: 36px; font-size: 11px; }
+        .btn-rename:hover { background-color: var(--accent-color); color: var(--dustloop-dark); border-color: var(--accent-color); }
 
         .editor-layout { display: flex; flex-direction: column; gap: 15px; height: calc(100vh - 140px); margin-top: 15px; position: relative; }
         .workspace-dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; min-height: 0; }
@@ -418,6 +422,24 @@
             const currentFolder = getCurrentFolder();
             currentFolder.children = currentFolder.children.filter(item => item.id !== itemId);
             if (movingItemPointer && movingItemPointer.id === itemId) cancelMove();
+            saveData();
+            renderGrid();
+        }
+
+        // NEW FEATURE: Global renaming executor tool for cards
+        function renameItem(item, event) {
+            event.stopPropagation();
+            const currentName = item.name;
+            const targetName = prompt(`Modify descriptor text for "${currentName}":`, currentName);
+            if (!targetName || targetName.trim() === "" || targetName.trim() === currentName) return;
+
+            item.name = targetName.trim();
+            
+            // For files, automatically align top heading with new descriptor updates
+            if (item.type === 'file' && item.content.startsWith(`# ${currentName}`)) {
+                item.content = item.content.replace(`# ${currentName}`, `# ${item.name}`);
+            }
+
             saveData();
             renderGrid();
         }
@@ -811,6 +833,9 @@
 
                 const del = document.createElement('button'); del.className = 'btn-delete'; del.innerHTML = '✕'; del.onclick = (e) => deleteItem(item.id, e);
                 const mv = document.createElement('button'); mv.className = 'btn-move'; mv.innerHTML = '⤳'; mv.onclick = (e) => startMoveItem(item, e);
+                
+                // Inject overlay rename button configuration parameters
+                const ren = document.createElement('button'); ren.className = 'btn-rename'; ren.innerHTML = '✎'; ren.title = 'Rename'; ren.onclick = (e) => renameItem(item, e);
 
                 if (item.type === 'folder') {
                     sq.onclick = () => enterFolder(item);
@@ -823,7 +848,7 @@
                     sq.innerHTML = `<div class="icon link-icon">🔗</div><div class="item-name">${item.name}</div>`;
                 }
 
-                wrapper.appendChild(sq); wrapper.appendChild(del); wrapper.appendChild(mv); grid.appendChild(wrapper);
+                wrapper.appendChild(sq); wrapper.appendChild(del); wrapper.appendChild(mv); wrapper.appendChild(ren); grid.appendChild(wrapper);
             });
         }
 
@@ -833,13 +858,12 @@
             document.body.appendChild(a); a.click(); a.remove();
         }
 
-        // NEW RECURSIVE ENGINE: Traverses tree nodes to merge incoming data arrays without clearing matches
+        // SWAPPED IDENTIFIER LOGIC: Inbound imports assign tag metadata to incoming conflict copies rather than pre-existing local data
         function deepMergeNoteTrees(targetNode, sourceNode) {
             if (!sourceNode.children) return;
             if (!targetNode.children) targetNode.children = [];
 
             sourceNode.children.forEach(sourceChild => {
-                // Find node item sharing the exact same name descriptor value match
                 let matchingTargetChild = targetNode.children.find(
                     tChild => tChild.name.toLowerCase() === sourceChild.name.toLowerCase() && tChild.type === sourceChild.type
                 );
@@ -848,26 +872,30 @@
                     if (sourceChild.type === 'folder') {
                         deepMergeNoteTrees(matchingTargetChild, sourceChild);
                     } else if (sourceChild.type === 'file') {
-                        // Check structural identity properties: contents or spreadsheet matrix definitions
                         const textContentIdentical = matchingTargetChild.content === sourceChild.content;
                         const canvasMatrixIdentical = JSON.stringify(matchingTargetChild.canvasMatrix) === JSON.stringify(sourceChild.canvasMatrix);
                         
                         if (!textContentIdentical || !canvasMatrixIdentical) {
-                            // Elements match names but harbor divergent text fields -> assign timestamp to prevent content losses
+                            // FIXED: Create a clone of the INCOMING file, rename IT, and preserve your original pre-existing file names
                             const uniqueClonedChild = JSON.parse(JSON.stringify(sourceChild));
                             uniqueClonedChild.id = sourceChild.type + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
                             uniqueClonedChild.name = `${sourceChild.name} (Imported Backup)`;
+                            
+                            // Align interior Markdown text header with imported identity modifications
+                            if (uniqueClonedChild.content.startsWith(`# ${sourceChild.name}`)) {
+                                uniqueClonedChild.content = uniqueClonedChild.content.replace(`# ${sourceChild.name}`, `# ${uniqueClonedChild.name}`);
+                            }
                             targetNode.children.push(uniqueClonedChild);
                         }
                     } else if (sourceChild.type === 'link') {
                         if (matchingTargetChild.url !== sourceChild.url) {
                             const clonedLink = JSON.parse(JSON.stringify(sourceChild));
                             clonedLink.id = 'link_' + Date.now();
+                            clonedLink.name = `${sourceChild.name} (Imported Backup)`;
                             targetNode.children.push(clonedLink);
                         }
                     }
                 } else {
-                    // Element exhibits an completely unique structural label -> inject cleanly directly into folder arrays
                     const freshNodeCopy = JSON.parse(JSON.stringify(sourceChild));
                     targetNode.children.push(freshNodeCopy);
                 }
@@ -881,10 +909,8 @@
                 try {
                     const parsed = JSON.parse(e.target.result);
                     if (parsed && parsed.notebooks) {
-                        // Launch strategic branch reconciliation mapping sequence
                         deepMergeNoteTrees(appData.notebooks, parsed.notebooks);
                         
-                        // Retain active art profile attributes if target profile does not have canvas overrides
                         if (!appData.backgroundImage && parsed.backgroundImage) {
                             appData.backgroundImage = parsed.backgroundImage;
                             document.body.style.backgroundImage = `url('${parsed.backgroundImage}')`;
@@ -894,12 +920,12 @@
                         cancelMove(); 
                         saveData(); 
                         renderGrid();
-                        alert("Note database synchronization and merge complete! Duplicate items skipped.");
+                        alert("Note database reconciliation and merge complete! Duplicate items skipped.");
                     } else {
                         alert("Invalid backup structure format.");
                     }
                 } catch (err) { 
-                    alert("Error processing JSON metadata configuration values."); 
+                    alert("Error processing JSON data."); 
                 }
             };
             r.readAsText(file); input.value = '';
