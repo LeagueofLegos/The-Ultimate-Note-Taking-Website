@@ -4,29 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Ultimate Note-Taking Website</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    
     <style>
         :root {
-            --bg-color: #121216;
-            --panel-color: #1c1c22;
-            --accent-color: #ffb703;
-            --text-color: #e2e2e7;
-            --text-dim: #a0a0a5;
-            --danger-color: #e74c3c;
-            --move-color: #2196f3;
+            --bg-color: #0a0a0c;
+            --bg-gradient: radial-gradient(circle at 50% 0%, #16161e 0%, #0a0a0c 100%);
+            --panel-color: rgba(22, 22, 28, 0.7);
+            --panel-border: rgba(255, 255, 255, 0.06);
+            --accent-color: #ffb703; 
+            --accent-glow: rgba(255, 183, 3, 0.4);
+            --text-color: #f5f5f7;
+            --text-dim: #767685;
+            --danger-color: #ef4444;
+            --move-color: #3b82f6;
             --dustloop-dark: #151518;
             --dustloop-border: #2d2d38;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-color);
+            background-image: var(--bg-gradient);
+            color: var(--text-color);
+            margin: 0;
+            padding: 30px;
+            min-height: 100vh;
+            box-sizing: border-box;
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
         }
 
         .view-section { display: block; }
@@ -36,40 +46,56 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid var(--dustloop-border);
-            padding-bottom: 15px;
-            margin-bottom: 15px;
-            background: rgba(28, 28, 34, 0.85);
-            padding: 15px;
-            border-radius: 6px;
-            backdrop-filter: blur(5px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            background: rgba(22, 22, 28, 0.5);
+            padding: 15px 20px;
+            border-radius: 8px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--panel-border);
         }
 
-        h1 { margin: 0; font-size: 24px; letter-spacing: 1px; color: var(--accent-color); font-weight: 700; }
+        h1 { 
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0; 
+            font-size: 26px; 
+            background: linear-gradient(to right, #fff 40%, var(--text-dim));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
         .search-box {
             width: 100%;
             max-width: 400px;
-            padding: 10px 14px;
-            background-color: var(--dustloop-dark);
-            border: 2px solid var(--dustloop-border);
-            border-radius: 4px;
+            padding: 12px 16px;
+            background-color: rgba(6, 6, 8, 0.8);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
             color: white;
             font-size: 14px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             outline: none;
             box-sizing: border-box;
+            font-family: inherit;
+            transition: border-color 0.2s;
         }
-        .search-box:focus { border-color: var(--accent-color); }
+        .search-box:focus { border-color: var(--accent-color); box-shadow: 0 0 10px var(--accent-glow); }
 
         .search-results-pane {
             background-color: var(--panel-color);
-            border: 2px solid var(--dustloop-border);
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
         }
-        .search-results-pane h3 { margin-top: 0; color: var(--accent-color); }
+        .search-results-pane h3 { margin-top: 0; color: var(--accent-color); font-family: 'Orbitron', sans-serif; letter-spacing: 1px; font-size: 16px; }
         
         .search-result-item {
             display: block;
@@ -79,162 +105,199 @@
             border: none;
             font-family: inherit;
             color: inherit;
-            padding: 10px;
-            border-bottom: 1px solid var(--dustloop-border);
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             cursor: pointer;
+            transition: background-color 0.2s;
         }
         .search-result-item:hover { background-color: rgba(255, 183, 3, 0.1); }
-        .search-path { font-size: 12px; color: var(--text-dim); }
+        .search-path { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
         .nav-bar {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 25px;
+            gap: 8px;
+            margin-bottom: 30px;
             font-size: 14px;
             color: var(--text-dim);
-            background: rgba(21, 21, 24, 0.8);
-            padding: 10px;
-            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(22, 22, 28, 0.4);
+            padding: 12px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--panel-border);
         }
 
         .nav-link {
             cursor: pointer;
             color: var(--accent-color);
-            font-weight: bold;
+            font-weight: 700;
             background: none;
             border: none;
             padding: 0;
+            font-family: inherit;
             font-size: 14px;
+            transition: color 0.2s;
         }
-        .nav-link:hover { text-decoration: underline; }
+        .nav-link:hover { color: #fff; text-shadow: 0 0 8px var(--accent-glow); }
 
-        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        .controls { display: flex; gap: 12px; align-items: center; }
 
         .btn {
-            background-color: var(--panel-color);
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--panel-color);
             color: white;
-            border: 2px solid var(--dustloop-border);
-            padding: 10px 16px;
-            font-weight: bold;
+            border: 1px solid var(--panel-border);
+            padding: 10px 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 12px;
             border-radius: 4px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
         .btn:hover { 
-            border-color: var(--accent-color);
-            background-color: #25252d;
+            border-color: rgba(255, 255, 255, 0.2);
+            background-color: rgba(35, 35, 45, 0.8);
+            transform: translateY(-1px);
         }
         .btn-main {
-            background-color: #2d2d38;
+            background: var(--accent-color);
             border-color: var(--accent-color);
-            color: var(--accent-color);
+            box-shadow: 0 4px 12px rgba(255, 183, 3, 0.2);
+            color: #0a0a0c;
         }
         .btn-main:hover {
-            background-color: var(--accent-color);
-            color: var(--dustloop-dark);
+            background-color: #ffa600;
+            border-color: #ffa600;
+            box-shadow: 0 4px 20px var(--accent-glow);
         }
-        .btn-utility { border-color: #444; color: var(--text-dim); }
+        .btn-utility { color: var(--text-dim); }
+        .btn-utility:hover { color: #fff; }
+        
+        .btn-paste {
+            background-color: var(--move-color);
+            border-color: var(--move-color);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            animation: pulse 2s infinite;
+        }
+        .btn-paste:hover { background-color: #2563eb; border-color: #2563eb; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 20px;
-            background: rgba(21, 21, 24, 0.6);
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 25px;
         }
 
         .card-container { position: relative; aspect-ratio: 1 / 1; }
 
         .grid-item {
-            width: 100%; height: 100%; background-color: var(--panel-color); border: 2px solid var(--dustloop-border);
-            border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center;
-            cursor: pointer; transition: transform 0.1s, border-color 0.2s, background-color 0.2s; padding: 15px;
+            width: 100%; height: 100%; background: var(--panel-color); backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px); border: 1px solid var(--panel-border); border-radius: 12px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94); padding: 24px;
             box-sizing: border-box; text-align: center; user-select: none; color: var(--text-color); font-family: inherit;
         }
-        .grid-item:hover { transform: translateY(-2px); border-color: var(--accent-color); background-color: #22222a; }
-        .grid-item.moving { opacity: 0.4; border-style: dashed; border-color: var(--move-color); }
 
-        .icon { font-size: 48px; margin-bottom: 10px; }
-        .folder-icon { color: var(--accent-color); }
-        .file-icon { color: #5c78ff; }
-        .link-icon { color: #e74c3c; }
-        .item-name { font-weight: 600; font-size: 16px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-        .btn-delete, .btn-move, .btn-rename {
-            position: absolute; background: rgba(0, 0, 0, 0.6); border: 1px solid #444;
-            color: #aaa; border-radius: 4px; width: 24px; height: 24px; cursor: pointer;
-            font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 10;
+        .grid-item:hover {
+            transform: translateY(-5px); border-color: var(--accent-color); background: rgba(28, 28, 38, 0.8);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5), 0 0 15px rgba(255, 183, 3, 0.15);
         }
-        .btn-delete { top: 8px; right: 8px; }
-        .btn-delete:hover { background-color: var(--danger-color); color: white; border-color: var(--danger-color); }
-        .btn-move { top: 8px; left: 8px; font-size: 14px; }
-        .btn-move:hover { background-color: var(--move-color); color: white; border-color: var(--move-color); }
         
-        /* NEW OVERLAY BUTTON: Aligned dynamically alongside delete handles */
-        .btn-rename { top: 8px; right: 36px; font-size: 11px; }
-        .btn-rename:hover { background-color: var(--accent-color); color: var(--dustloop-dark); border-color: var(--accent-color); }
+        .grid-item:hover .svg-icon { transform: scale(1.08); filter: drop-shadow(0 0 8px rgba(255,255,255,0.2)); }
+        .grid-item.moving { opacity: 0.3; border-style: dashed; border-color: var(--move-color); }
 
-        .editor-layout { display: flex; flex-direction: column; gap: 15px; height: calc(100vh - 140px); margin-top: 15px; position: relative; }
+        .svg-icon { width: 54px; height: 54px; margin-bottom: 16px; transition: transform 0.2s ease; }
+        .folder-theme { fill: #ffb703; }
+        .file-theme { fill: #2196f3; }
+        .link-theme { fill: #ef4444; }
+
+        .item-name { font-weight: 600; font-size: 15px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.5px; }
+
+        .card-action {
+            position: absolute; background: rgba(10, 10, 12, 0.7); border: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-dim); border-radius: 6px; width: 28px; height: 28px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; z-index: 10; opacity: 0; transition: all 0.2s ease;
+        }
+        .card-container:hover .card-action { opacity: 1; }
+
+        .btn-delete { top: 12px; right: 12px; }
+        .btn-delete:hover { background-color: var(--danger-color); color: white; border-color: var(--danger-color); box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+        .btn-move { top: 12px; left: 12px; font-size: 16px; }
+        .btn-move:hover { background-color: var(--move-color); color: white; border-color: var(--move-color); box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
+        .btn-rename { top: 12px; right: 44px; font-size: 12px; }
+        .btn-rename:hover { background-color: var(--accent-color); color: var(--dustloop-dark); border-color: var(--accent-color); box-shadow: 0 0 10px rgba(255,183,3,0.4); }
+
+        .editor-layout { display: flex; flex-direction: column; gap: 15px; height: calc(100vh - 140px); margin-top: 20px; position: relative; }
         .workspace-dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; min-height: 0; }
         
         .pane-wrapper { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-        .pane-header { background: var(--dustloop-dark); padding: 6px 12px; border: 2px solid var(--dustloop-border); border-bottom: none; border-radius: 4px 4px 0 0; font-size: 12px; font-weight: bold; color: var(--accent-color); display: flex; justify-content: space-between; align-items: center; }
+        .pane-header { background: var(--dustloop-dark); padding: 10px 14px; border: 1px solid var(--dustloop-border); border-bottom: none; border-radius: 6px 6px 0 0; font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: bold; color: var(--accent-color); letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; }
         
         .editor-pane {
-            width: 100%; height: 100%; background-color: var(--dustloop-dark); border: 2px solid var(--dustloop-border);
-            border-radius: 0 0 6px 6px; color: #f1f1f1; font-family: 'Courier New', Courier, monospace; font-size: 16px;
-            padding: 15px; box-sizing: border-box; resize: none; outline: none;
+            width: 100%; height: 100%; background-color: #060608; border: 1px solid var(--dustloop-border);
+            border-radius: 0 0 8px 8px; color: #e2e2e9; font-family: 'Courier New', Courier, monospace; font-size: 16px;
+            padding: 20px; box-sizing: border-box; resize: none; outline: none; line-height: 1.6; transition: border-color 0.2s;
         }
-        .editor-pane:focus { border-color: var(--accent-color); }
+        .editor-pane:focus { border-color: var(--accent-color); box-shadow: 0 0 10px rgba(255,70,85,0.05); }
 
         /* INFINITE SHEET CELL CANVAS SPREAD GRID ENGINE */
         .infinite-grid-canvas {
             width: 100%; height: 100%; background-color: var(--dustloop-dark); border: 2px solid var(--dustloop-border);
             border-radius: 0 0 6px 6px; overflow: auto; box-sizing: border-box; padding: 10px;
         }
-        .infinite-grid-table-layout {
-            border-collapse: collapse; table-layout: fixed; width: max-content;
-        }
+        .infinite-grid-table-layout { border-collapse: collapse; table-layout: fixed; width: max-content; }
         .infinite-grid-table-layout td {
-            border: 1px solid var(--dustloop-border); padding: 0; width: 120px; min-width: 120px; max-width: 120px; height: 35px; background-color: #111115;
+            border: 1px solid rgba(255, 255, 255, 0.05); padding: 0; width: 140px; min-width: 140px; max-width: 140px; height: 38px; background-color: #0c0c0e;
         }
         .cell-textarea-input {
-            width: 100%; height: 100%; background: transparent; border: none; color: #fff; padding: 6px;
+            width: 100%; height: 100%; background: transparent; border: none; color: #fff; padding: 8px;
             font-size: 14px; font-family: inherit; outline: none; box-sizing: border-box; resize: none; overflow: hidden; white-space: nowrap;
         }
         .cell-textarea-input:focus {
-            background-color: rgba(255, 183, 3, 0.15); border: 1px solid var(--accent-color);
+            background-color: rgba(255, 183, 3, 0.1); border: 1px solid var(--accent-color);
         }
 
-        .preview-pane { background-color: var(--panel-color); border: 2px solid var(--dustloop-border); border-radius: 0 0 6px 6px; padding: 20px; box-sizing: border-box; overflow-y: auto; height: 100%; }
-        .preview-pane h1 { font-size: 1.8em; border-bottom: 2px solid var(--accent-color); padding-bottom: 5px; margin-top: 0; color: white; }
-        .preview-pane h2 { font-size: 1.4em; border-bottom: 1px solid var(--dustloop-border); padding-bottom: 5px; color: var(--accent-color); }
+        .preview-pane { background-color: rgba(15, 15, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--dustloop-border); border-radius: 0 0 8px 8px; padding: 30px; box-sizing: border-box; overflow-y: auto; height: 100%; line-height: 1.6; }
+        .preview-pane h1 { font-family: 'Orbitron', sans-serif; font-size: 1.8em; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-top: 0; color: white; }
+        .preview-pane h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.3em; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px; color: var(--accent-color); margin-top: 20px; }
         .preview-pane h3 { font-size: 1.1em; color: #e2e2e7; margin-top: 15px; }
-        .preview-pane a { color: var(--accent-color); text-decoration: underline; cursor: pointer; }
+        .preview-pane ul { padding-left: 20px; margin: 8px 0; }
+        .preview-pane li { margin-bottom: 6px; }
+        .preview-pane a { color: var(--accent-color); text-decoration: underline; cursor: pointer; font-weight: 600; }
+        .preview-pane br { display: block; content: ""; margin-top: 8px; }
 
-        .video-overlay-modal {
-            position: absolute; top: 45px; right: 20px; width: 420px; height: calc(100% - 65px);
-            background-color: var(--dustloop-dark); border: 2px solid var(--accent-color);
-            border-radius: 6px; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column;
-            gap: 10px; z-index: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        /* Tactical Code Block Dynamic Copy Interface Wrapper Elements */
+        .copy-code-block-card {
+            background-color: #060608; border: 1px solid var(--dustloop-border); border-left: 4px solid var(--accent-color);
+            border-radius: 4px; padding: 12px 16px; margin: 15px 0; display: flex; justify-content: space-between; align-items: center;
         }
-        .video-element { width: 100%; background: #000; border-radius: 4px; flex: 1; min-height: 0; object-fit: contain; }
-        .video-input { width: 100%; padding: 8px; background: #000; border: 1px solid var(--dustloop-border); color: #fff; border-radius: 4px; box-sizing: border-box; }
+        .copy-code-text-line { font-family: 'Courier New', Courier, monospace; font-size: 15px; color: #7bf1a8; font-weight: 600; white-space: pre-wrap; word-break: break-all; padding-right: 15px; }
+        .btn-copy-action { background-color: var(--panel-color); border: 1px solid var(--dustloop-border); color: var(--accent-color); padding: 6px 12px; font-family: inherit; font-size: 11px; font-weight: bold; text-transform: uppercase; cursor: pointer; border-radius: 3px; transition: all 0.15s; }
+        .btn-copy-action:hover { background-color: var(--accent-color); color: #000; }
 
         .autocomplete-suggestions {
-            position: absolute; background: var(--panel-color); border: 2px solid var(--accent-color);
-            border-radius: 4px; max-height: 150px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            position: absolute; background: #1c1c22; border: 1px solid var(--accent-color);
+            border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
         }
-        .suggestion-item { padding: 8px 12px; cursor: pointer; font-family: monospace; font-size: 14px; }
-        .suggestion-item:hover, .suggestion-item.active { background: var(--accent-color); color: var(--dustloop-dark); font-weight: bold; }
+        .suggestion-item { padding: 10px 14px; cursor: pointer; font-family: monospace; font-size: 14px; color: #e2e2e7; }
+        .suggestion-item:hover, .suggestion-item.active { background: var(--accent-color); color: #0a0a0c; font-weight: bold; }
 
-        .help-panel { background-color: var(--panel-color); border: 2px solid var(--dustloop-border); border-radius: 6px; padding: 12px; font-size: 13px; }
-        .help-title { font-weight: bold; color: var(--accent-color); cursor: pointer; display: flex; justify-content: space-between; }
-        .help-content { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; color: var(--text-dim); }
-        .help-content code { background: #000; padding: 2px 4px; border-radius: 3px; color: #fff; }
+        .help-panel { background-color: rgba(22, 22, 28, 0.6); border: 1px solid var(--dustloop-border); border-radius: 8px; padding: 15px; font-size: 13px; margin-top: 5px; }
+        .help-title { font-weight: bold; color: var(--accent-color); cursor: pointer; display: flex; justify-content: space-between; font-family: 'Orbitron', sans-serif; letter-spacing: 0.5px; }
+        .help-content { margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; color: var(--text-dim); }
+        .help-content code { background: #000; padding: 3px 6px; border-radius: 4px; color: #fff; border: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
@@ -282,18 +345,18 @@
                 
                 <div class="pane-wrapper" id="left-pane-text-wrapper">
                     <div class="pane-header">RAW WORKSPACE SPECIFICATION ENGINE</div>
-                    <textarea id="markdown-input" class="editor-pane" placeholder="Type Markdown here..." oninput="handleEditorInput(event)" onkeydown="handleEditorKeydowns(event)"></textarea>
+                    <textarea id="markdown-input" class="editor-pane" placeholder="Type Markdown here... Use [[code]] for quick copy fields." oninput="handleEditorInput(event)" onkeydown="handleEditorKeydowns(event)"></textarea>
                     <div id="autocomplete-box" class="autocomplete-suggestions"></div>
                 </div>
 
                 <div class="pane-wrapper hidden" id="left-pane-grid-wrapper">
                     <div class="pane-header">
                         <span>INFINITE SHEET CANVAS INPUT GRID</span>
-                        <div style="display: flex; gap: 5px;">
-                            <button class="btn" style="padding: 1px 8px; font-size: 11px;" onclick="expandInfiniteCanvasDimension('row')">+ Row</button>
-                            <button class="btn" style="padding: 1px 8px; font-size: 11px;" onclick="expandInfiniteCanvasDimension('col')">+ Column</button>
-                            <button class="btn" style="padding: 1px 8px; font-size: 11px; background: var(--danger-color); border-color: var(--danger-color);" onclick="shrinkInfiniteCanvasDimension('row')">- Row</button>
-                            <button class="btn" style="padding: 1px 8px; font-size: 11px; background: var(--danger-color); border-color: var(--danger-color);" onclick="shrinkInfiniteCanvasDimension('col')">- Col</button>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn" style="padding: 2px 10px; font-size: 11px;" onclick="expandInfiniteCanvasDimension('row')">+ Row</button>
+                            <button class="btn" style="padding: 2px 10px; font-size: 11px;" onclick="expandInfiniteCanvasDimension('col')">+ Column</button>
+                            <button class="btn" style="padding: 2px 10px; font-size: 11px; background: var(--danger-color); border-color: var(--danger-color);" onclick="shrinkInfiniteCanvasDimension('row')">- Row</button>
+                            <button class="btn" style="padding: 2px 10px; font-size: 11px; background: var(--danger-color); border-color: var(--danger-color);" onclick="shrinkInfiniteCanvasDimension('col')">- Col</button>
                         </div>
                     </div>
                     <div class="infinite-grid-canvas">
@@ -311,8 +374,8 @@
             </div>
 
             <div id="floating-video-panel" class="video-overlay-modal hidden">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--dustloop-border); padding-bottom:4px;">
-                    <span style="font-size:12px; font-weight:bold; color:var(--accent-color);">LAB FRAME ADVANCEMENT FEED</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--dustloop-border); padding-bottom:6px;">
+                    <span style="font-size:12px; font-weight:bold; color:var(--accent-color); font-family: 'Orbitron', sans-serif;">LAB FRAME ADVANCEMENT FEED</span>
                     <button class="btn" style="padding:2px 8px; font-size:11px; background:var(--danger-color); border:none;" onclick="toggleLabVideoPlayer()">✕ Close</button>
                 </div>
                 <input type="text" id="video-url-src" class="video-input" placeholder="Paste .mp4 link / select local file..." onchange="loadVideoSource(this.value)">
@@ -335,10 +398,9 @@
                     <span id="help-toggle-icon">▲</span>
                 </div>
                 <div id="help-options" class="help-content">
-                    <div><code># Character Name</code> → Title Headings</div>
-                    <div><code>## Category Name</code> → Mid-tier Sections</div>
-                    <div><code>### Combo Variation</code> → Deep Sub-sections</div>
-                    <div><code>- 2A > 5B > 2C</code> → Bullet Points</div>
+                    <div><code># Heading</code> → Title Text</div>
+                    <div><code>- Item</code> → Bullet Lists</div>
+                    <div><code>[[2A > 5B]]</code> → Clickable Copy Field</div>
                 </div>
             </div>
         </div>
@@ -354,13 +416,17 @@
         const notationSuggestions = ["2A > ", "5A > ", "2B > ", "5B > ", "2C > ", "5C > ", "j.A > ", "j.B > ", "j.C > ", "iad ", "dl.", "ch > "];
         let activeSuggestionIndex = 0;
 
+        const folderSvg = `<svg class="svg-icon folder-theme" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>`;
+        const fileSvg = `<svg class="svg-icon file-theme" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>`;
+        const linkSvg = `<svg class="svg-icon link-theme" viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-4.5 2.24-4.5 5s1.74 5 4.5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 4.5-2.24 4.5-5s-1.74-5-4.5-5z"/></svg>`;
+
         try {
             let parsed = JSON.parse(rawData);
             if (parsed && parsed.notebooks) {
                 appData = parsed;
                 if (!appData.backgroundImage) appData.backgroundImage = "";
             } else {
-                throw new Error("Upgrade structure fallback configuration layout tracking records");
+                throw new Error("Rebuild matrix references");
             }
         } catch(e) {
             appData = {
@@ -426,7 +492,6 @@
             renderGrid();
         }
 
-        // NEW FEATURE: Global renaming executor tool for cards
         function renameItem(item, event) {
             event.stopPropagation();
             const currentName = item.name;
@@ -434,12 +499,9 @@
             if (!targetName || targetName.trim() === "" || targetName.trim() === currentName) return;
 
             item.name = targetName.trim();
-            
-            // For files, automatically align top heading with new descriptor updates
             if (item.type === 'file' && item.content.startsWith(`# ${currentName}`)) {
                 item.content = item.content.replace(`# ${currentName}`, `# ${item.name}`);
             }
-
             saveData();
             renderGrid();
         }
@@ -482,7 +544,6 @@
 
         function openEditor(fileItem) {
             activeFilePointer = fileItem;
-            
             if (!activeFilePointer.editorMode) activeFilePointer.editorMode = 'text';
             if (!activeFilePointer.gridRowsCount) activeFilePointer.gridRowsCount = 4;
             if (!activeFilePointer.gridColsCount) activeFilePointer.gridColsCount = 4;
@@ -492,7 +553,6 @@
             document.getElementById('markdown-input').value = fileItem.content;
             document.getElementById('browser-view').classList.add('hidden');
             document.getElementById('editor-view').classList.remove('hidden');
-            
             applyLeftPaneDisplaySettings();
         }
 
@@ -553,7 +613,6 @@
                         saveData();
                         updateLivePreviewFromActiveFocusCell(e.target.value);
                     };
-
                     cellInput.onfocus = (e) => {
                         updateLivePreviewFromActiveFocusCell(e.target.value);
                     };
@@ -575,61 +634,101 @@
 
         function shrinkInfiniteCanvasDimension(dimension) {
             if (!activeFilePointer) return;
-            
             if (dimension === 'row') {
                 if (activeFilePointer.gridRowsCount <= 1) return;
                 const targetRowIdx = activeFilePointer.gridRowsCount - 1;
-                if (!confirm(`Are you sure you want to delete Row ${targetRowIdx + 1}? All cell notes in this row will be permanently lost.`)) return;
-                
-                for (let c = 0; c < activeFilePointer.gridColsCount; c++) {
-                    delete activeFilePointer.canvasMatrix[`${targetRowIdx}_${c}`];
-                }
+                if (!confirm(`Delete Row ${targetRowIdx + 1}? Cells inside will be lost.`)) return;
+                for (let c = 0; c < activeFilePointer.gridColsCount; c++) { delete activeFilePointer.canvasMatrix[`${targetRowIdx}_${c}`]; }
                 activeFilePointer.gridRowsCount--;
             }
-            
             if (dimension === 'col') {
                 if (activeFilePointer.gridColsCount <= 1) return;
                 const targetColIdx = activeFilePointer.gridColsCount - 1;
-                if (!confirm(`Are you sure you want to delete Column ${targetColIdx + 1}? All cell notes in this column will be permanently lost.`)) return;
-                
-                for (let r = 0; r < activeFilePointer.gridRowsCount; r++) {
-                    delete activeFilePointer.canvasMatrix[`${r}_${targetColIdx}`];
-                }
+                if (!confirm(`Delete Column ${targetColIdx + 1}? Cells inside will be lost.`)) return;
+                for (let r = 0; r < activeFilePointer.gridRowsCount; r++) { delete activeFilePointer.canvasMatrix[`${r}_${targetColIdx}`]; }
                 activeFilePointer.gridColsCount--;
             }
-
             saveData();
             buildInfiniteGridCanvasMatrixHTML();
             document.getElementById('markdown-preview').innerHTML = ''; 
         }
 
         function updateLivePreviewFromActiveFocusCell(text) {
+            // Leverage common processor layout directly onto active sheet focal coordinates
+            renderParsedHtmlStringIntoPreviewPane(text);
+        }
+
+        // REFACTORED PROCESSOR ENGINE: Parses list nesting anomalies and builds clipboard macros cleanly
+        function renderParsedHtmlStringIntoPreviewPane(rawText) {
             const previewPane = document.getElementById('markdown-preview');
-            let html = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-            html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-            html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-            html = html.replace(/^\s*-\s*(.*$)/gim, '<li>$1</li>');
-            html = html.replace(/\n/g, '<br>');
-            previewPane.innerHTML = html;
+            const lines = rawText.split('\n');
+            let processedHtml = "";
+            let insideListBlock = false;
+
+            lines.forEach(line => {
+                const isBulletRow = /^\s*[-\*]\s*(.*$)/.test(line);
+
+                // Safe List Termination State Controller Check Hook
+                if (insideListBlock && !isBulletRow && line.trim() !== "") {
+                    processedHtml += "</ul>";
+                    insideListBlock = false;
+                }
+
+                if (isBulletRow) {
+                    const matches = line.match(/^\s*[-\*]\s*(.*$)/);
+                    if (!insideListBlock) {
+                        processedHtml += "<ul>";
+                        insideListBlock = true;
+                    }
+                    processedHtml += `<li>${matches[1]}</li>`;
+                } else if (/^#\s(.*$)/.test(line)) {
+                    processedHtml += `<h1>${line.replace(/^#\s/, '')}</h1>`;
+                } else if (/^##\s(.*$)/.test(line)) {
+                    processedHtml += `<h2>${line.replace(/^##\s/, '')}</h2>`;
+                } else if (/^###\s(.*$)/.test(line)) {
+                    processedHtml += `<h3>${line.replace(/^###\s/, '')}</h3>`;
+                } else if (line.trim() !== "") {
+                    processedHtml += `${line}<br>`;
+                } else {
+                    processedHtml += "<br>";
+                }
+            });
+
+            if (insideListBlock) {
+                processedHtml += "</ul>";
+            }
+
+            // Sanitization filter parameters running across processed string sequences
+            processedHtml = processedHtml.replace(/\[(.*?)\]\((.*?)\)/gim, '<a onclick="handleMarkdownLinkClick(\'$2\', event)">$1</a>');
+
+            // NEW MACRO CONVERTER: Maps double bracket string arrays straight to custom clipboard cards
+            processedHtml = processedHtml.replace(/\[\[(.*?)\]\]/gim, function(match, comboString) {
+                // Escapes potential quotes in strings to avoid breaking onclick handles
+                const escapedCombo = comboString.replace(/'/g, "\\'");
+                return `
+                    <div class="copy-code-block-card">
+                        <div class="copy-code-text-line">${comboString}</div>
+                        <button class="btn-copy-action" onclick="executeQuickClipboardCopyAction('${escapedCombo}')">Copy Combo</button>
+                    </div>
+                `;
+            });
+
+            previewPane.innerHTML = processedHtml;
+        }
+
+        // Execution handle assigned directly onto processed macro layout buttons
+        function executeQuickClipboardCopyAction(textToCopy) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                alert(`Combo successfully copied to your system clipboard:\n"${textToCopy}"`);
+            }).catch(err => {
+                console.error("Clipboard copy failure:", err);
+            });
         }
 
         function updateLivePreview() {
             if (activeFilePointer && activeFilePointer.editorMode === 'grid') return;
             const rawText = document.getElementById('markdown-input').value;
-            const previewPane = document.getElementById('markdown-preview');
-            
-            let html = rawText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-            html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-            html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-            html = html.replace(/^\s*-\s*(.*$)/gim, '<li>$1</li>');
-            html = html.replace(/^\s*\*\s*(.*$)/gim, '<li>$1</li>');
-            html = html.replace(/\[(.*?)\]\((.*?)\)/gim, '<a onclick="handleMarkdownLinkClick(\'$2\', event)">$1</a>');
-            html = html.replace(/\n/g, '<br>');
-
-            if (html.includes('<li>')) html = html.replace(/(<li>.*<\/li>)/gim, '<ul>$1</ul>');
-            previewPane.innerHTML = html;
+            renderParsedHtmlStringIntoPreviewPane(rawText);
         }
 
         function handleMarkdownLinkClick(url, event) {
@@ -821,7 +920,7 @@
             const folder = getCurrentFolder();
 
             if (!folder.children || folder.children.length === 0) {
-                grid.innerHTML = `<p style="color: var(--text-dim);">Directory empty.</p>`;
+                grid.innerHTML = `<p style="color: var(--text-dim); grid-column: 1/-1; text-align: center; margin-top: 40px; font-weight: 600;">Directory empty. Initialize your workspace files above.</p>`;
                 return;
             }
 
@@ -831,11 +930,9 @@
                 const sq = document.createElement('button'); sq.className = 'grid-item';
                 if (movingItemPointer && movingItemPointer.id === item.id) sq.classList.add('moving');
 
-                const del = document.createElement('button'); del.className = 'btn-delete'; del.innerHTML = '✕'; del.onclick = (e) => deleteItem(item.id, e);
-                const mv = document.createElement('button'); mv.className = 'btn-move'; mv.innerHTML = '⤳'; mv.onclick = (e) => startMoveItem(item, e);
-                
-                // Inject overlay rename button configuration parameters
-                const ren = document.createElement('button'); ren.className = 'btn-rename'; ren.innerHTML = '✎'; ren.title = 'Rename'; ren.onclick = (e) => renameItem(item, e);
+                const del = document.createElement('button'); del.className = 'card-action btn-delete'; del.innerHTML = '✕'; del.onclick = (e) => deleteItem(item.id, e);
+                const mv = document.createElement('button'); mv.className = 'card-action btn-move'; mv.innerHTML = '⤳'; mv.onclick = (e) => startMoveItem(item, e);
+                const ren = document.createElement('button'); ren.className = 'card-action btn-rename'; ren.innerHTML = '✎'; ren.title = 'Rename'; ren.onclick = (e) => renameItem(item, e);
 
                 if (item.type === 'folder') {
                     sq.onclick = () => enterFolder(item);
@@ -858,7 +955,6 @@
             document.body.appendChild(a); a.click(); a.remove();
         }
 
-        // SWAPPED IDENTIFIER LOGIC: Inbound imports assign tag metadata to incoming conflict copies rather than pre-existing local data
         function deepMergeNoteTrees(targetNode, sourceNode) {
             if (!sourceNode.children) return;
             if (!targetNode.children) targetNode.children = [];
@@ -876,12 +972,10 @@
                         const canvasMatrixIdentical = JSON.stringify(matchingTargetChild.canvasMatrix) === JSON.stringify(sourceChild.canvasMatrix);
                         
                         if (!textContentIdentical || !canvasMatrixIdentical) {
-                            // FIXED: Create a clone of the INCOMING file, rename IT, and preserve your original pre-existing file names
                             const uniqueClonedChild = JSON.parse(JSON.stringify(sourceChild));
                             uniqueClonedChild.id = sourceChild.type + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
                             uniqueClonedChild.name = `${sourceChild.name} (Imported Backup)`;
                             
-                            // Align interior Markdown text header with imported identity modifications
                             if (uniqueClonedChild.content.startsWith(`# ${sourceChild.name}`)) {
                                 uniqueClonedChild.content = uniqueClonedChild.content.replace(`# ${sourceChild.name}`, `# ${uniqueClonedChild.name}`);
                             }
@@ -910,12 +1004,10 @@
                     const parsed = JSON.parse(e.target.result);
                     if (parsed && parsed.notebooks) {
                         deepMergeNoteTrees(appData.notebooks, parsed.notebooks);
-                        
                         if (!appData.backgroundImage && parsed.backgroundImage) {
                             appData.backgroundImage = parsed.backgroundImage;
                             document.body.style.backgroundImage = `url('${parsed.backgroundImage}')`;
                         }
-                        
                         navigationHistory = [appData.notebooks];
                         cancelMove(); 
                         saveData(); 
