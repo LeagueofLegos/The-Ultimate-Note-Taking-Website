@@ -176,7 +176,6 @@
         .link-icon { color: #e74c3c; }
         .item-name { font-weight: 600; font-size: 16px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        /* FIXED: Action overlay layout parameters mapped to be permanently visible */
         .card-action {
             position: absolute; background: rgba(0, 0, 0, 0.7); border: 1px solid #444;
             color: #aaa; border-radius: 4px; width: 26px; height: 28px; cursor: pointer;
@@ -204,7 +203,6 @@
         }
         .editor-pane:focus { border-color: var(--accent-color); }
 
-        /* INFINITE SHEET CELL CANVAS SPREAD GRID ENGINE */
         .infinite-grid-canvas {
             width: 100%; height: 100%; background-color: var(--dustloop-dark); border: 2px solid var(--dustloop-border);
             border-radius: 0 0 6px 6px; overflow: auto; box-sizing: border-box; padding: 10px;
@@ -230,7 +228,6 @@
         .preview-pane a { color: var(--accent-color); text-decoration: underline; cursor: pointer; font-weight: 600; }
         .preview-pane br { display: block; content: ""; margin-top: 8px; }
 
-        /* Tactical Code Block Dynamic Copy Interface Wrapper Elements */
         .copy-code-block-card {
             background-color: #060608; border: 1px solid var(--dustloop-border); border-left: 4px solid var(--accent-color);
             border-radius: 4px; padding: 12px 16px; margin: 15px 0; display: flex; justify-content: space-between; align-items: center;
@@ -241,12 +238,12 @@
 
         .autocomplete-suggestions {
             position: absolute; background: #1c1c22; border: 1px solid var(--accent-color);
-            border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            border-radius: 6px; max-height: 220px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
         }
-        .suggestion-item { padding: 10px 14px; cursor: pointer; font-family: monospace; font-size: 14px; color: #e2e2e7; }
+        .suggestion-item { padding: 10px 14px; cursor: pointer; font-family: monospace; font-size: 14px; color: #e2e2e7; text-align: left; }
         .suggestion-item:hover, .suggestion-item.active { background: var(--accent-color); color: #0a0a0c; font-weight: bold; }
 
-        .help-panel { background-color: var(--panel-color); border: 1px solid var(--dustloop-border); border-radius: 6px; padding: 12px; font-size: 13px; }
+        .help-panel { background-color: var(--panel-color); border: 2px solid var(--dustloop-border); border-radius: 6px; padding: 12px; font-size: 13px; }
         .help-title { font-weight: bold; color: var(--accent-color); cursor: pointer; display: flex; justify-content: space-between; }
         .help-content { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; color: var(--text-dim); }
         .help-content code { background: #000; padding: 2px 4px; border-radius: 3px; color: #fff; }
@@ -365,8 +362,13 @@
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
 
-        const notationSuggestions = ["2A > ", "5A > ", "2B > ", "5B > ", "2C > ", "5C > ", "j.A > ", "j.B > ", "j.C > ", "iad ", "dl.", "ch > "];
+        // Core base fighting game vocabulary data maps
+        const baseFgcWords = ["2A", "2B", "2C", "5A", "5B", "5C", "236A", "236B", "236C", "214A", "214B", "214C", "66B", "66C", "iad", "dl.", "(land)", "(delay)"];
+        let dynamicallyLearnedTokens = new Set();
         let activeSuggestionIndex = 0;
+        let currentSuggestionsMapping = [];
+        let globalTokenStartOffset = 0;
+        let globalTokenEndOffset = 0;
 
         try {
             let parsed = JSON.parse(rawData);
@@ -501,6 +503,9 @@
             document.getElementById('markdown-input').value = fileItem.content;
             document.getElementById('browser-view').classList.add('hidden');
             document.getElementById('editor-view').classList.remove('hidden');
+            
+            // Build vocabulary index vectors out of file arrays instantly on open
+            parseContextVocabulariesFromActiveFile(fileItem.content);
             applyLeftPaneDisplaySettings();
         }
 
@@ -605,7 +610,6 @@
             renderParsedHtmlStringIntoPreviewPane(text);
         }
 
-        // FIXED: Explicitly breaks lists dynamically when plain formatting lines or title variants load
         function renderParsedHtmlStringIntoPreviewPane(rawText) {
             const previewPane = document.getElementById('markdown-preview');
             const lines = rawText.split('\n');
@@ -646,7 +650,6 @@
 
             processedHtml = processedHtml.replace(/\[(.*?)\]\((.*?)\)/gim, '<a onclick="handleMarkdownLinkClick(\'$2\', event)">$1</a>');
 
-            // NEW FEATURE MAP: Appends instant action buttons over double bracket text components
             processedHtml = processedHtml.replace(/\[\[(.*?)\]\]/gim, function(match, comboString) {
                 const escapedCombo = comboString.replace(/'/g, "\\'");
                 return `
@@ -704,34 +707,79 @@
             if (player) player.currentTime += seconds;
         }
 
+        // Context dynamic token compiler crawling functions
+        function parseContextVocabulariesFromActiveFile(textData) {
+            if (!textData) return;
+            // Splitting logic tailored for extracting distinct notation moves out of raw combo text lines
+            const blocks = textData.split(/[\s\>,\~]+/);
+            blocks.forEach(token => {
+                let cleanWord = token.replace(/[\[\]#\-]/g, '').trim();
+                if (cleanWord.length >= 2 && !baseFgcWords.includes(cleanWord)) {
+                    dynamicallyLearnedTokens.add(cleanWord);
+                }
+            });
+        }
+
+        // ADVANCED STRATEGIC PREDICTIVE INTELLIGENT AUTOCOMPLETE IMPLEMENTATION
         function handleEditorInput(event) {
             updateLivePreview();
             const editor = event.target;
             const val = editor.value;
             const cursor = editor.selectionStart;
-            
-            const lastWord = val.substring(0, cursor).split(/[\s\n]+/).pop();
             const box = document.getElementById('autocomplete-box');
 
-            if (!lastWord) { box.style.display = 'none'; return; }
+            // Parse vocabulary strings actively on key entries
+            parseContextVocabulariesFromActiveFile(val);
 
-            const filtered = notationSuggestions.filter(s => s.toLowerCase().startsWith(lastWord.toLowerCase()) && s.toLowerCase() !== lastWord.toLowerCase());
-            if (filtered.length === 0) { box.style.display = 'none'; return; }
+            if (cursor === 0) { box.style.display = 'none'; return; }
 
+            // Evaluate trailing character boundaries directly
+            const charBeforeCursor = val.substring(cursor - 1, cursor);
+            let searchPrefix = "";
+            
+            // 1. Proactive Guessing Context Trigger Logic Checks
+            if (charBeforeCursor === " " || charBeforeCursor === ">" || charBeforeCursor === ",") {
+                // Instantly display global options continuation array parameters
+                currentSuggestionsMapping = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
+                globalTokenStartOffset = cursor;
+                globalTokenEndOffset = cursor;
+            } else {
+                // 2. Fragment Character Substring Matching Loop Sequence Rules
+                let startWordIndex = cursor - 1;
+                while (startWordIndex >= 0 && !/[\s\>,\~\[\]]/.test(val.substring(startWordIndex, startWordIndex + 1))) {
+                    startWordIndex--;
+                }
+                startWordIndex++;
+                searchPrefix = val.substring(startWordIndex, cursor);
+
+                if (!searchPrefix) { box.style.display = 'none'; return; }
+
+                const combinedDataset = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
+                currentSuggestionsMapping = combinedDataset.filter(word => 
+                    word.toLowerCase().startsWith(searchPrefix.toLowerCase()) && word.toLowerCase() !== searchPrefix.toLowerCase()
+                );
+                
+                globalTokenStartOffset = startWordIndex;
+                globalTokenEndOffset = cursor;
+            }
+
+            if (currentSuggestionsMapping.length === 0) { box.style.display = 'none'; return; }
+
+            // Render matching dropdown options vectors onto workspace viewport dimensions
             box.innerHTML = '';
             activeSuggestionIndex = 0;
             
-            filtered.forEach((str, i) => {
+            currentSuggestionsMapping.slice(0, 8).forEach((str, i) => {
                 const div = document.createElement('div');
                 div.className = `suggestion-item ${i === 0 ? 'active' : ''}`;
                 div.textContent = str;
-                div.onclick = () => insertAutoCompleteSuggestion(str, lastWord);
+                div.onclick = () => insertAutoCompleteSuggestion(str);
                 box.appendChild(div);
             });
 
             box.style.display = 'block';
-            box.style.left = '20px';
-            box.style.bottom = '20px';
+            box.style.left = '35px';
+            box.style.bottom = '40px';
         }
 
         function handleEditorKeydowns(event) {
@@ -740,32 +788,39 @@
                 const items = box.getElementsByClassName('suggestion-item');
                 if (event.key === 'ArrowDown') {
                     event.preventDefault();
-                    items[activeSuggestionIndex].classList.remove('active');
+                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.remove('active');
                     activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
-                    items[activeSuggestionIndex].classList.add('active');
+                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.add('active');
                 } else if (event.key === 'ArrowUp') {
                     event.preventDefault();
-                    items[activeSuggestionIndex].classList.remove('active');
+                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.remove('active');
                     activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
-                    items[activeSuggestionIndex].classList.add('active');
+                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.add('active');
                 } else if (event.key === 'Tab' || event.key === 'Enter') {
                     event.preventDefault();
-                    items[activeSuggestionIndex].click();
+                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].click();
                 } else if (event.key === 'Escape') {
                     box.style.display = 'none';
                 }
             }
         }
 
-        function insertAutoCompleteSuggestion(str, prefix) {
+        function insertAutoCompleteSuggestion(insertedReplacementString) {
             const editor = document.getElementById('markdown-input');
             const val = editor.value;
-            const cursor = editor.selectionStart;
-            const start = cursor - prefix.length;
             
-            editor.value = val.substring(0, start) + str + val.substring(cursor);
-            editor.setSelectionRange(start + str.length, start + str.length);
+            // Append explicit lookahead spaces behind standard sequencing indicators natively
+            if ((insertedReplacementString.endsWith(">") || insertedReplacementString.endsWith(",")) && !insertedReplacementString.endsWith(" ")) {
+                insertedReplacementString += " ";
+            }
+
+            editor.value = val.substring(0, globalTokenStartOffset) + insertedReplacementString + val.substring(globalTokenEndOffset);
+            
+            const nextCursorFocusPos = globalTokenStartOffset + insertedReplacementString.length;
+            editor.setSelectionRange(nextCursorFocusPos, nextCursorFocusPos);
+            
             document.getElementById('autocomplete-box').style.display = 'none';
+            editor.focus();
             updateLivePreview();
         }
 
