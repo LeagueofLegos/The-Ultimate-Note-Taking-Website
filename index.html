@@ -89,13 +89,17 @@
         .nav-bar {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 25px;
+            gap: 8px;
+            margin-bottom: 30px;
             font-size: 14px;
             color: var(--text-dim);
-            background: rgba(21, 21, 24, 0.8);
-            padding: 10px;
-            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(22, 22, 28, 0.4);
+            padding: 12px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--panel-border);
         }
 
         .nav-link {
@@ -105,11 +109,13 @@
             background: none;
             border: none;
             padding: 0;
+            font-family: inherit;
             font-size: 14px;
+            transition: color 0.2s;
         }
-        .nav-link:hover { text-decoration: underline; }
+        .nav-link:hover { color: #fff; text-shadow: 0 0 8px var(--accent-glow); }
 
-        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        .controls { display: flex; gap: 12px; align-items: center; }
 
         .btn {
             background-color: var(--panel-color);
@@ -142,6 +148,7 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
             animation: pulse 2s infinite;
         }
+        .btn-paste:hover { background-color: #2563eb; border-color: #2563eb; }
 
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
@@ -236,6 +243,7 @@
         .btn-copy-action { background-color: var(--panel-color); border: 1px solid var(--dustloop-border); color: var(--accent-color); padding: 6px 12px; font-family: inherit; font-size: 11px; font-weight: bold; text-transform: uppercase; cursor: pointer; border-radius: 3px; transition: all 0.15s; }
         .btn-copy-action:hover { background-color: var(--accent-color); color: #000; }
 
+        /* Autocomplete Box Sizing Rules */
         .autocomplete-suggestions {
             position: absolute; background: #1c1c22; border: 1px solid var(--accent-color);
             border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
@@ -247,6 +255,11 @@
         .help-title { font-weight: bold; color: var(--accent-color); cursor: pointer; display: flex; justify-content: space-between; }
         .help-content { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; color: var(--text-dim); }
         .help-content code { background: #000; padding: 2px 4px; border-radius: 3px; color: #fff; }
+
+        /* Dictionary Builder Interface Style Handles */
+        .dict-builder-box { display: flex; gap: 8px; margin-top: 10px; background: #0c0c0e; padding: 8px; border-radius: 4px; border: 1px solid var(--dustloop-border); }
+        .dict-input { background: #000; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; flex: 1; outline: none; font-size: 13px; }
+        .dict-input:focus { border-color: var(--accent-color); }
     </style>
 </head>
 <body>
@@ -324,7 +337,7 @@
 
             <div id="floating-video-panel" class="video-overlay-modal hidden">
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--dustloop-border); padding-bottom:6px;">
-                    <span style="font-size:12px; font-weight:bold; color:var(--accent-color);">LAB FRAME ADVANCEMENT FEED</span>
+                    <span style="font-size:12px; font-weight:bold; color:var(--accent-color); font-family: 'Segoe UI', sans-serif;">LAB FRAME ADVANCEMENT FEED</span>
                     <button class="btn" style="padding:2px 8px; font-size:11px; background:var(--danger-color); border:none;" onclick="toggleLabVideoPlayer()">✕ Close</button>
                 </div>
                 <input type="text" id="video-url-src" class="video-input" placeholder="Paste .mp4 link / select local file..." onchange="loadVideoSource(this.value)">
@@ -343,13 +356,17 @@
 
             <div class="help-panel">
                 <div class="help-title" onclick="toggleHelp()">
-                    <span>💡 Formatting Cheat Sheet & Vim Key Bindings</span>
+                    <span>💡 Custom Dictionary Builder Module & Formatting Controls</span>
                     <span id="help-toggle-icon">▲</span>
                 </div>
                 <div id="help-options" class="help-content">
-                    <div><code># Heading</code> → Title Text</div>
-                    <div><code>- Item</code> → Bullet Lists</div>
-                    <div><code>[[2A > 5B]]</code> → Clickable Copy Field</div>
+                    <div style="grid-column: 1 / -1;">
+                        <span style="font-weight:bold; color:#fff;">Add Custom Dictionary Words:</span>
+                        <div class="dict-builder-box">
+                            <input type="text" id="custom-vocab-input" class="dict-input" placeholder="e.g., 236A~B~A~C~236A+D, (land), >, ~">
+                            <button class="btn btn-main" style="padding: 4px 12px; font-size:11px;" onclick="registerCustomVocabularyWordViaPanel()">+ Register Word</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -362,8 +379,8 @@
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
 
-        // Core base fighting game vocabulary data maps
-        const baseFgcWords = ["2A", "2B", "2C", "5A", "5B", "5C", "236A", "236B", "236C", "214A", "214B", "214C", "66B", "66C", "iad", "dl.", "(land)", "(delay)"];
+        // Core base fighting game vocabulary data maps - separators explicitly added as standalone tokens
+        const baseFgcWords = [">", ",", "~", "2A", "2B", "2C", "5A", "5B", "5C", "236A", "236B", "236C", "214A", "214B", "214C", "66B", "66C", "iad", "dl.", "(land)", "(delay)"];
         let dynamicallyLearnedTokens = new Set();
         let activeSuggestionIndex = 0;
         let currentSuggestionsMapping = [];
@@ -379,6 +396,10 @@
                 appData = parsed;
                 if (!appData.backgroundImage) appData.backgroundImage = "";
                 if (parsed.autocompleteWeightsLedger) autocompleteWeightsLedger = parsed.autocompleteWeightsLedger;
+                // Safely load user custom defined phrases out of storage tables
+                if (parsed.userCustomDictionary) {
+                    parsed.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));
+                }
             } else {
                 throw new Error("Matrix configuration trace execution fail");
             }
@@ -398,6 +419,8 @@
 
         function saveData() {
             appData.autocompleteWeightsLedger = autocompleteWeightsLedger;
+            // Map the set to an array so JSON stringification works cleanly
+            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);
             localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
         }
 
@@ -681,20 +704,34 @@
             renderParsedHtmlStringIntoPreviewPane(rawText);
         }
 
-        // Context dynamic token crawling functions
         function parseContextVocabulariesFromActiveFile(textData) {
             if (!textData) return;
-            // Clean up delimiters completely to isolate exact moves, labels, and links
-            const blocks = textData.split(/[\s\>,\~]+/);
+            // Tokenizer splits text by spaces, preserving operational symbols as independent elements
+            const blocks = textData.split(/\s+/);
             blocks.forEach(token => {
                 let cleanWord = token.replace(/[\[\]#\-]/g, '').trim();
-                if (cleanWord.length >= 2 && !baseFgcWords.includes(cleanWord)) {
+                if (cleanWord.length >= 1 && !baseFgcWords.includes(cleanWord)) {
                     dynamicallyLearnedTokens.add(cleanWord);
                 }
             });
         }
 
-        // STRATEGIC RE-ENGINEERING: Context-Aware Look-Back and Delimiter-Agnostic Autocomplete Engine
+        // FEATURE HANDLE: Manual vocabulary registration method
+        function registerCustomVocabularyWordViaPanel() {
+            const inputField = document.getElementById('custom-vocab-input');
+            const textWord = inputField.value.trim();
+            if (!textWord) return;
+
+            dynamicallyLearnedTokens.add(textWord);
+            // Assign default fallback weighting value to custom registered phrase assets
+            autocompleteWeightsLedger[textWord] = (autocompleteWeightsLedger[textWord] || 0) + 5;
+            
+            saveData();
+            inputField.value = '';
+            alert(`"${textWord}" successfully registered into your local autocomplete lookup dataset!`);
+        }
+
+        // DELIMITER-AGNOSTIC SPECIAL CHARACTER RANGE MATRICES ENGINE
         function handleEditorInput(event) {
             updateLivePreview();
             const editor = event.target;
@@ -706,26 +743,19 @@
 
             if (cursor === 0) { box.style.display = 'none'; return; }
 
-            // Isolate what is immediately behind the cursor
             const charBeforeCursor = val.substring(cursor - 1, cursor);
             let searchPrefix = "";
             let matchDataset = [];
 
-            // Define characters that mean a user finished a token and wants the next prediction or separator
-            const contextTriggers = [" ", ">", ",", "~"];
-
-            if (contextTriggers.includes(charBeforeCursor)) {
-                // User just typed a delimiter. Provide the absolute top weighted guesses or next moves.
+            // FIXED trigger logic: triggers predictive arrays when space blocks load
+            if (charBeforeCursor === " ") {
                 matchDataset = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
-                
-                // Set insertion boundaries directly at the cursor
                 globalTokenStartOffset = cursor;
                 globalTokenEndOffset = cursor;
             } else {
-                // User is actively mid-token. Find the start of the current word segment.
+                // FIXED lookback engine: special characters like >, , or ~ are captured cleanly as words
                 let startWordIndex = cursor - 1;
-                // Walk backward until we hit any delimiter or whitespace character boundary
-                while (startWordIndex >= 0 && !/[\s\>,\~\[\]]/.test(val.substring(startWordIndex, startWordIndex + 1))) {
+                while (startWordIndex >= 0 && !/\s/.test(val.substring(startWordIndex, startWordIndex + 1))) {
                     startWordIndex--;
                 }
                 startWordIndex++;
@@ -744,14 +774,12 @@
 
             if (matchDataset.length === 0) { box.style.display = 'none'; return; }
 
-            // Sort based on historical weight selection statistics ledger metrics
             matchDataset.sort((a, b) => {
                 const weightA = autocompleteWeightsLedger[a] || 0;
                 const weightB = autocompleteWeightsLedger[b] || 0;
                 return weightB - weightA;
             });
 
-            // STRICT ENFORCEMENT: Slice matches strictly down to 3 options maximum
             currentSuggestionsMapping = matchDataset.slice(0, 3);
 
             box.innerHTML = '';
@@ -766,13 +794,10 @@
             });
 
             box.style.display = 'block';
-            
-            // Absolute overlay position configurations to stick directly below writing text tracks safely
             box.style.left = '35px';
             box.style.bottom = '40px';
         }
 
-        // FIXED: Explicitly intercepts Arrow operations to bypass browser text area container scroll bounds
         function handleEditorKeydowns(event) {
             const box = document.getElementById('autocomplete-box');
             if (box.style.display === 'block') {
@@ -801,13 +826,12 @@
             const editor = document.getElementById('markdown-input');
             const val = editor.value;
             
-            // Weight Tracking: Record selection to bubble up its priority ranking
             if (!autocompleteWeightsLedger[insertedReplacementString]) {
                 autocompleteWeightsLedger[insertedReplacementString] = 0;
             }
             autocompleteWeightsLedger[insertedReplacementString]++;
 
-            // Smart Append: Smart spacing formatting behind sequence indicators
+            // Auto-append spacing properties securely right behind formatting punctuation markers
             let tailSpacer = "";
             if (insertedReplacementString === ">" || insertedReplacementString === ",") {
                 tailSpacer = " ";
