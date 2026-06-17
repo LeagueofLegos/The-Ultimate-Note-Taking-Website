@@ -84,32 +84,38 @@
             cursor: pointer;
         }
         .search-result-item:hover { background-color: rgba(255, 183, 3, 0.1); }
-        .search-path { font-size: 12px; color: var(--text-dim); }
+        .search-path { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
         .nav-bar {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 25px;
+            gap: 8px;
+            margin-bottom: 30px;
             font-size: 14px;
             color: var(--text-dim);
-            background: rgba(21, 21, 24, 0.8);
-            padding: 10px;
-            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(22, 22, 28, 0.4);
+            padding: 12px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--panel-border);
         }
 
         .nav-link {
             cursor: pointer;
             color: var(--accent-color);
-            font-weight: bold;
+            font-weight: 700;
             background: none;
             border: none;
             padding: 0;
+            font-family: inherit;
             font-size: 14px;
+            transition: color 0.2s;
         }
-        .nav-link:hover { text-decoration: underline; }
+        .nav-link:hover { color: #fff; text-shadow: 0 0 8px var(--accent-glow); }
 
-        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        .controls { display: flex; gap: 12px; align-items: center; }
 
         .btn {
             background-color: var(--panel-color);
@@ -142,6 +148,7 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
             animation: pulse 2s infinite;
         }
+        .btn-paste:hover { background-color: #2563eb; border-color: #2563eb; }
 
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
@@ -238,7 +245,7 @@
 
         .autocomplete-suggestions {
             position: absolute; background: #1c1c22; border: 1px solid var(--accent-color);
-            border-radius: 6px; max-height: 220px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
         }
         .suggestion-item { padding: 10px 14px; cursor: pointer; font-family: monospace; font-size: 14px; color: #e2e2e7; text-align: left; }
         .suggestion-item:hover, .suggestion-item.active { background: var(--accent-color); color: #0a0a0c; font-weight: bold; }
@@ -370,11 +377,16 @@
         let globalTokenStartOffset = 0;
         let globalTokenEndOffset = 0;
 
+        // NEW COMPONENT: Tracking array infrastructure to store preferred move selections over runtime intervals
+        let autocompleteWeightsLedger = {};
+
         try {
             let parsed = JSON.parse(rawData);
             if (parsed && parsed.notebooks) {
                 appData = parsed;
                 if (!appData.backgroundImage) appData.backgroundImage = "";
+                // Safety map evaluation parameters
+                if (parsed.autocompleteWeightsLedger) autocompleteWeightsLedger = parsed.autocompleteWeightsLedger;
             } else {
                 throw new Error("Matrix configuration trace execution fail");
             }
@@ -393,6 +405,8 @@
         let navigationHistory = [appData.notebooks];
 
         function saveData() {
+            // Keep user preference weights logged safely within standard structure saves
+            appData.autocompleteWeightsLedger = autocompleteWeightsLedger;
             localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
         }
 
@@ -503,9 +517,6 @@
             document.getElementById('markdown-input').value = fileItem.content;
             document.getElementById('browser-view').classList.add('hidden');
             document.getElementById('editor-view').classList.remove('hidden');
-            
-            // Build vocabulary index vectors out of file arrays instantly on open
-            parseContextVocabulariesFromActiveFile(fileItem.content);
             applyLeftPaneDisplaySettings();
         }
 
@@ -707,10 +718,8 @@
             if (player) player.currentTime += seconds;
         }
 
-        // Context dynamic token compiler crawling functions
         function parseContextVocabulariesFromActiveFile(textData) {
             if (!textData) return;
-            // Splitting logic tailored for extracting distinct notation moves out of raw combo text lines
             const blocks = textData.split(/[\s\>,\~]+/);
             blocks.forEach(token => {
                 let cleanWord = token.replace(/[\[\]#\-]/g, '').trim();
@@ -720,7 +729,7 @@
             });
         }
 
-        // ADVANCED STRATEGIC PREDICTIVE INTELLIGENT AUTOCOMPLETE IMPLEMENTATION
+        // UPDATED: FIXED COMPONENT FOR THREE-OPTION EXCEL CANVASES WITH SELF-CORRECTING WEIGHTS
         function handleEditorInput(event) {
             updateLivePreview();
             const editor = event.target;
@@ -728,23 +737,19 @@
             const cursor = editor.selectionStart;
             const box = document.getElementById('autocomplete-box');
 
-            // Parse vocabulary strings actively on key entries
             parseContextVocabulariesFromActiveFile(val);
 
             if (cursor === 0) { box.style.display = 'none'; return; }
 
-            // Evaluate trailing character boundaries directly
             const charBeforeCursor = val.substring(cursor - 1, cursor);
             let searchPrefix = "";
+            let initialRawDataset = [];
             
-            // 1. Proactive Guessing Context Trigger Logic Checks
             if (charBeforeCursor === " " || charBeforeCursor === ">" || charBeforeCursor === ",") {
-                // Instantly display global options continuation array parameters
-                currentSuggestionsMapping = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
+                initialRawDataset = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
                 globalTokenStartOffset = cursor;
                 globalTokenEndOffset = cursor;
             } else {
-                // 2. Fragment Character Substring Matching Loop Sequence Rules
                 let startWordIndex = cursor - 1;
                 while (startWordIndex >= 0 && !/[\s\>,\~\[\]]/.test(val.substring(startWordIndex, startWordIndex + 1))) {
                     startWordIndex--;
@@ -755,7 +760,7 @@
                 if (!searchPrefix) { box.style.display = 'none'; return; }
 
                 const combinedDataset = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
-                currentSuggestionsMapping = combinedDataset.filter(word => 
+                initialRawDataset = combinedDataset.filter(word => 
                     word.toLowerCase().startsWith(searchPrefix.toLowerCase()) && word.toLowerCase() !== searchPrefix.toLowerCase()
                 );
                 
@@ -763,13 +768,22 @@
                 globalTokenEndOffset = cursor;
             }
 
-            if (currentSuggestionsMapping.length === 0) { box.style.display = 'none'; return; }
+            if (initialRawDataset.length === 0) { box.style.display = 'none'; return; }
 
-            // Render matching dropdown options vectors onto workspace viewport dimensions
+            // Weight Sorting Loop: Dynamically bubble up elements based on user interaction frequency ledger
+            initialRawDataset.sort((alpha, bravo) => {
+                const weightAlpha = autocompleteWeightsLedger[alpha] || 0;
+                const weightBravo = autocompleteWeightsLedger[bravo] || 0;
+                return weightBravo - weightAlpha; 
+            });
+
+            // FIXED: Limit suggestions array slice mapping precisely to three fields maximum
+            currentSuggestionsMapping = initialRawDataset.slice(0, 3);
+
             box.innerHTML = '';
             activeSuggestionIndex = 0;
             
-            currentSuggestionsMapping.slice(0, 8).forEach((str, i) => {
+            currentSuggestionsMapping.forEach((str, i) => {
                 const div = document.createElement('div');
                 div.className = `suggestion-item ${i === 0 ? 'active' : ''}`;
                 div.textContent = str;
@@ -782,17 +796,19 @@
             box.style.bottom = '40px';
         }
 
+        // FIXED: Corrected keydown listeners prevent lock anomalies when using arrow controls
         function handleEditorKeydowns(event) {
             const box = document.getElementById('autocomplete-box');
             if (box.style.display === 'block') {
                 const items = box.getElementsByClassName('suggestion-item');
+                
                 if (event.key === 'ArrowDown') {
-                    event.preventDefault();
+                    event.preventDefault(); // Break system scrolling action conflicts completely
                     if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.remove('active');
                     activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
                     if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.add('active');
                 } else if (event.key === 'ArrowUp') {
-                    event.preventDefault();
+                    event.preventDefault(); // Break system scrolling action conflicts completely
                     if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.remove('active');
                     activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
                     if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.add('active');
@@ -809,7 +825,12 @@
             const editor = document.getElementById('markdown-input');
             const val = editor.value;
             
-            // Append explicit lookahead spaces behind standard sequencing indicators natively
+            // Weight Incrementation Mechanism: Record selected string inside user context ledger structures
+            if (!autocompleteWeightsLedger[insertedReplacementString]) {
+                autocompleteWeightsLedger[insertedReplacementString] = 0;
+            }
+            autocompleteWeightsLedger[insertedReplacementString]++;
+
             if ((insertedReplacementString.endsWith(">") || insertedReplacementString.endsWith(",")) && !insertedReplacementString.endsWith(" ")) {
                 insertedReplacementString += " ";
             }
@@ -821,6 +842,7 @@
             
             document.getElementById('autocomplete-box').style.display = 'none';
             editor.focus();
+            saveData(); 
             updateLivePreview();
         }
 
@@ -1002,6 +1024,11 @@
                     const parsed = JSON.parse(e.target.result);
                     if (parsed && parsed.notebooks) {
                         deepMergeNoteTrees(appData.notebooks, parsed.notebooks);
+                        if (parsed.autocompleteWeightsLedger) {
+                            for (let token in parsed.autocompleteWeightsLedger) {
+                                autocompleteWeightsLedger[token] = (autocompleteWeightsLedger[token] || 0) + parsed.autocompleteWeightsLedger[token];
+                            }
+                        }
                         if (!appData.backgroundImage && parsed.backgroundImage) {
                             appData.backgroundImage = parsed.backgroundImage;
                             document.body.style.backgroundImage = `url('${parsed.backgroundImage}')`;
