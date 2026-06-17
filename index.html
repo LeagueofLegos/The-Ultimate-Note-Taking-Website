@@ -89,33 +89,27 @@
         .nav-bar {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 30px;
+            gap: 10px;
+            margin-bottom: 25px;
             font-size: 14px;
             color: var(--text-dim);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            background: rgba(22, 22, 28, 0.4);
-            padding: 12px 16px;
-            border-radius: 6px;
-            border: 1px solid var(--panel-border);
+            background: rgba(21, 21, 24, 0.8);
+            padding: 10px;
+            border-radius: 4px;
         }
 
         .nav-link {
             cursor: pointer;
             color: var(--accent-color);
-            font-weight: 700;
+            font-weight: bold;
             background: none;
             border: none;
             padding: 0;
-            font-family: inherit;
             font-size: 14px;
-            transition: color 0.2s;
         }
-        .nav-link:hover { color: #fff; text-shadow: 0 0 8px var(--accent-glow); }
+        .nav-link:hover { text-decoration: underline; }
 
-        .controls { display: flex; gap: 12px; align-items: center; }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
 
         .btn {
             background-color: var(--panel-color);
@@ -148,7 +142,6 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
             animation: pulse 2s infinite;
         }
-        .btn-paste:hover { background-color: #2563eb; border-color: #2563eb; }
 
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
@@ -331,7 +324,7 @@
 
             <div id="floating-video-panel" class="video-overlay-modal hidden">
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--dustloop-border); padding-bottom:6px;">
-                    <span style="font-size:12px; font-weight:bold; color:var(--accent-color); font-family: 'Segoe UI', sans-serif;">LAB FRAME ADVANCEMENT FEED</span>
+                    <span style="font-size:12px; font-weight:bold; color:var(--accent-color);">LAB FRAME ADVANCEMENT FEED</span>
                     <button class="btn" style="padding:2px 8px; font-size:11px; background:var(--danger-color); border:none;" onclick="toggleLabVideoPlayer()">✕ Close</button>
                 </div>
                 <input type="text" id="video-url-src" class="video-input" placeholder="Paste .mp4 link / select local file..." onchange="loadVideoSource(this.value)">
@@ -377,7 +370,7 @@
         let globalTokenStartOffset = 0;
         let globalTokenEndOffset = 0;
 
-        // NEW COMPONENT: Tracking array infrastructure to store preferred move selections over runtime intervals
+        // Tracking array infrastructure to store preferred move selections over runtime intervals
         let autocompleteWeightsLedger = {};
 
         try {
@@ -385,7 +378,6 @@
             if (parsed && parsed.notebooks) {
                 appData = parsed;
                 if (!appData.backgroundImage) appData.backgroundImage = "";
-                // Safety map evaluation parameters
                 if (parsed.autocompleteWeightsLedger) autocompleteWeightsLedger = parsed.autocompleteWeightsLedger;
             } else {
                 throw new Error("Matrix configuration trace execution fail");
@@ -405,7 +397,6 @@
         let navigationHistory = [appData.notebooks];
 
         function saveData() {
-            // Keep user preference weights logged safely within standard structure saves
             appData.autocompleteWeightsLedger = autocompleteWeightsLedger;
             localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
         }
@@ -517,6 +508,8 @@
             document.getElementById('markdown-input').value = fileItem.content;
             document.getElementById('browser-view').classList.add('hidden');
             document.getElementById('editor-view').classList.remove('hidden');
+            
+            parseContextVocabulariesFromActiveFile(fileItem.content);
             applyLeftPaneDisplaySettings();
         }
 
@@ -688,38 +681,10 @@
             renderParsedHtmlStringIntoPreviewPane(rawText);
         }
 
-        function handleMarkdownLinkClick(url, event) {
-            event.preventDefault();
-            const choice = confirm(`Link clicked: ${url}\n\n[OK] -> Open URL\n[Cancel] -> Edit link`);
-            if (choice) {
-                window.open(url, '_blank');
-            } else {
-                const newUrl = prompt("Modify Destination Link String:", url);
-                if (newUrl && newUrl.trim() !== "") {
-                    const editor = document.getElementById('markdown-input');
-                    editor.value = editor.value.replace(url, newUrl.trim());
-                    updateLivePreview();
-                }
-            }
-        }
-
-        function toggleLabVideoPlayer() {
-            const overlay = document.getElementById('floating-video-panel');
-            overlay.classList.toggle('hidden');
-        }
-
-        function loadVideoSource(url) { if (url) document.getElementById('lab-video-player').src = url; }
-        function loadLocalVideoFile(input) {
-            const file = input.files[0];
-            if (file) document.getElementById('lab-video-player').src = URL.createObjectURL(file);
-        }
-        function adjustVideoTime(seconds) {
-            const player = document.getElementById('lab-video-player');
-            if (player) player.currentTime += seconds;
-        }
-
+        // Context dynamic token crawling functions
         function parseContextVocabulariesFromActiveFile(textData) {
             if (!textData) return;
+            // Clean up delimiters completely to isolate exact moves, labels, and links
             const blocks = textData.split(/[\s\>,\~]+/);
             blocks.forEach(token => {
                 let cleanWord = token.replace(/[\[\]#\-]/g, '').trim();
@@ -729,7 +694,7 @@
             });
         }
 
-        // UPDATED: FIXED COMPONENT FOR THREE-OPTION EXCEL CANVASES WITH SELF-CORRECTING WEIGHTS
+        // STRATEGIC RE-ENGINEERING: Context-Aware Look-Back and Delimiter-Agnostic Autocomplete Engine
         function handleEditorInput(event) {
             updateLivePreview();
             const editor = event.target;
@@ -741,16 +706,25 @@
 
             if (cursor === 0) { box.style.display = 'none'; return; }
 
+            // Isolate what is immediately behind the cursor
             const charBeforeCursor = val.substring(cursor - 1, cursor);
             let searchPrefix = "";
-            let initialRawDataset = [];
-            
-            if (charBeforeCursor === " " || charBeforeCursor === ">" || charBeforeCursor === ",") {
-                initialRawDataset = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
+            let matchDataset = [];
+
+            // Define characters that mean a user finished a token and wants the next prediction or separator
+            const contextTriggers = [" ", ">", ",", "~"];
+
+            if (contextTriggers.includes(charBeforeCursor)) {
+                // User just typed a delimiter. Provide the absolute top weighted guesses or next moves.
+                matchDataset = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
+                
+                // Set insertion boundaries directly at the cursor
                 globalTokenStartOffset = cursor;
                 globalTokenEndOffset = cursor;
             } else {
+                // User is actively mid-token. Find the start of the current word segment.
                 let startWordIndex = cursor - 1;
+                // Walk backward until we hit any delimiter or whitespace character boundary
                 while (startWordIndex >= 0 && !/[\s\>,\~\[\]]/.test(val.substring(startWordIndex, startWordIndex + 1))) {
                     startWordIndex--;
                 }
@@ -760,25 +734,25 @@
                 if (!searchPrefix) { box.style.display = 'none'; return; }
 
                 const combinedDataset = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
-                initialRawDataset = combinedDataset.filter(word => 
-                    word.toLowerCase().startsWith(searchPrefix.toLowerCase()) && word.toLowerCase() !== searchPrefix.toLowerCase()
+                matchDataset = combinedDataset.filter(word => 
+                    word.toLowerCase().startsWith(searchPrefix.toLowerCase())
                 );
                 
                 globalTokenStartOffset = startWordIndex;
                 globalTokenEndOffset = cursor;
             }
 
-            if (initialRawDataset.length === 0) { box.style.display = 'none'; return; }
+            if (matchDataset.length === 0) { box.style.display = 'none'; return; }
 
-            // Weight Sorting Loop: Dynamically bubble up elements based on user interaction frequency ledger
-            initialRawDataset.sort((alpha, bravo) => {
-                const weightAlpha = autocompleteWeightsLedger[alpha] || 0;
-                const weightBravo = autocompleteWeightsLedger[bravo] || 0;
-                return weightBravo - weightAlpha; 
+            // Sort based on historical weight selection statistics ledger metrics
+            matchDataset.sort((a, b) => {
+                const weightA = autocompleteWeightsLedger[a] || 0;
+                const weightB = autocompleteWeightsLedger[b] || 0;
+                return weightB - weightA;
             });
 
-            // FIXED: Limit suggestions array slice mapping precisely to three fields maximum
-            currentSuggestionsMapping = initialRawDataset.slice(0, 3);
+            // STRICT ENFORCEMENT: Slice matches strictly down to 3 options maximum
+            currentSuggestionsMapping = matchDataset.slice(0, 3);
 
             box.innerHTML = '';
             activeSuggestionIndex = 0;
@@ -792,23 +766,25 @@
             });
 
             box.style.display = 'block';
+            
+            // Absolute overlay position configurations to stick directly below writing text tracks safely
             box.style.left = '35px';
             box.style.bottom = '40px';
         }
 
-        // FIXED: Corrected keydown listeners prevent lock anomalies when using arrow controls
+        // FIXED: Explicitly intercepts Arrow operations to bypass browser text area container scroll bounds
         function handleEditorKeydowns(event) {
             const box = document.getElementById('autocomplete-box');
             if (box.style.display === 'block') {
                 const items = box.getElementsByClassName('suggestion-item');
                 
                 if (event.key === 'ArrowDown') {
-                    event.preventDefault(); // Break system scrolling action conflicts completely
+                    event.preventDefault(); 
                     if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.remove('active');
                     activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
                     if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.add('active');
                 } else if (event.key === 'ArrowUp') {
-                    event.preventDefault(); // Break system scrolling action conflicts completely
+                    event.preventDefault(); 
                     if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.remove('active');
                     activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
                     if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.add('active');
@@ -825,19 +801,22 @@
             const editor = document.getElementById('markdown-input');
             const val = editor.value;
             
-            // Weight Incrementation Mechanism: Record selected string inside user context ledger structures
+            // Weight Tracking: Record selection to bubble up its priority ranking
             if (!autocompleteWeightsLedger[insertedReplacementString]) {
                 autocompleteWeightsLedger[insertedReplacementString] = 0;
             }
             autocompleteWeightsLedger[insertedReplacementString]++;
 
-            if ((insertedReplacementString.endsWith(">") || insertedReplacementString.endsWith(",")) && !insertedReplacementString.endsWith(" ")) {
-                insertedReplacementString += " ";
+            // Smart Append: Smart spacing formatting behind sequence indicators
+            let tailSpacer = "";
+            if (insertedReplacementString === ">" || insertedReplacementString === ",") {
+                tailSpacer = " ";
             }
 
-            editor.value = val.substring(0, globalTokenStartOffset) + insertedReplacementString + val.substring(globalTokenEndOffset);
+            const transformedToken = insertedReplacementString + tailSpacer;
+            editor.value = val.substring(0, globalTokenStartOffset) + transformedToken + val.substring(globalTokenEndOffset);
             
-            const nextCursorFocusPos = globalTokenStartOffset + insertedReplacementString.length;
+            const nextCursorFocusPos = globalTokenStartOffset + transformedToken.length;
             editor.setSelectionRange(nextCursorFocusPos, nextCursorFocusPos);
             
             document.getElementById('autocomplete-box').style.display = 'none';
