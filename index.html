@@ -177,7 +177,6 @@
         .link-icon { color: #e74c3c; }
         .item-name { font-weight: 600; font-size: 16px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        /* Action handles permanently mapped on user dashboard views */
         .card-action {
             position: absolute; background: rgba(0, 0, 0, 0.7); border: 1px solid #444;
             color: #aaa; border-radius: 4px; width: 26px; height: 28px; cursor: pointer;
@@ -191,8 +190,6 @@
         .btn-move:hover { background-color: var(--move-color); color: white; border-color: var(--move-color); }
         .btn-rename { top: 8px; right: 38px; font-size: 11px; }
         .btn-rename:hover { background-color: var(--accent-color); color: var(--dustloop-dark); border-color: var(--accent-color); }
-        
-        /* New custom button wrapper styling for the clone handle */
         .btn-duplicate { top: 8px; left: 38px; font-size: 12px; }
         .btn-duplicate:hover { background-color: #2ecc71; color: white; border-color: #2ecc71; }
 
@@ -357,6 +354,7 @@
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
 
+        // Core base fighting game vocabulary data maps - separators explicitly added as standalone tokens
         const baseFgcWords = [">", ",", "~", "2A", "2B", "2C", "5A", "5B", "5C", "236A", "236B", "236C", "214A", "214B", "214C", "66B", "66C", "iad", "dl.", "(land)", "(delay)"];
         let dynamicallyLearnedTokens = new Set();
         let activeSuggestionIndex = 0;
@@ -458,19 +456,14 @@
             renderGrid();
         }
 
-        // NEW FEATURE ENGINE: Creates a precise clone of selected workspace profiles, deep copying matrices
         function duplicateItem(item, event) {
             event.stopPropagation();
             const currentFolder = getCurrentFolder();
-            
-            // Deep clone object matrix data using JSON string tracking pairs
             let clonedItem = JSON.parse(JSON.stringify(item));
             
-            // Re-assign distinct identity references and append tag labels
             clonedItem.id = item.type + '_' + Date.now();
             clonedItem.name = `${item.name} - Copy`;
             
-            // If the item is a file, adjust the inner markdown header to match its copied identity label
             if (clonedItem.type === 'file' && clonedItem.content.startsWith(`# ${item.name}`)) {
                 clonedItem.content = clonedItem.content.replace(`# ${item.name}`, `# ${clonedItem.name}`);
             }
@@ -527,6 +520,8 @@
             document.getElementById('markdown-input').value = fileItem.content;
             document.getElementById('browser-view').classList.add('hidden');
             document.getElementById('editor-view').classList.remove('hidden');
+            
+            parseContextVocabulariesFromActiveFile(fileItem.content);
             applyLeftPaneDisplaySettings();
         }
 
@@ -656,7 +651,7 @@
                 } else if (/^##\s(.*$)/.test(line)) {
                     processedHtml += `<h2>${line.replace(/^##\s/, '')}</h2>`;
                 } else if (/^###\s(.*$)/.test(line)) {
-                    processedHtml += `Camp ${line.replace(/^###\s/, '')}</h3>`;
+                    processedHtml += `<h3>${line.replace(/^###\s/, '')}</h3>`;
                 } else if (line.trim() !== "") {
                     processedHtml += `${line}<br>`;
                 } else {
@@ -853,10 +848,10 @@
         function handleGlobalSearch() {
             const query = document.getElementById('searchBar').value.toLowerCase().trim();
             const fontPane = document.getElementById('search-results');
-            const resultsList = document.getElementById('search-results-list');
+            const GrandpaList = document.getElementById('search-results-list');
             
             if (!query) { fontPane.classList.add('hidden'); return; }
-            resultsList.innerHTML = '';
+            GrandpaList.innerHTML = '';
             let matches = [];
 
             function crawl(item, currentPath) {
@@ -866,7 +861,7 @@
             crawl(appData.notebooks, []);
 
             if (matches.length === 0) {
-                resultsList.innerHTML = `<p style="color: var(--text-dim); font-size:14px;">No matches found.</p>`;
+                GrandpaList.innerHTML = `<p style="color: var(--text-dim); font-size:14px;">No matches found.</p>`;
             } else {
                 matches.forEach(match => {
                     const btn = document.createElement('button');
@@ -885,7 +880,7 @@
                         else if (match.item.type === 'file') { navigationHistory.push(getCurrentFolder()); openEditor(match.item); }
                         else { enterFolder(getCurrentFolder()); }
                     };
-                    resultsList.appendChild(btn);
+                    GrandpaList.appendChild(btn);
                 });
             }
             fontPane.classList.remove('hidden');
@@ -893,7 +888,7 @@
 
         function toggleHelp() {
             const opts = document.getElementById('help-options');
-            document.getElementById('help-toggle-icon').textContent = opts.classList.contains('hidden) ? "▲" : "▼";
+            document.getElementById('help-toggle-icon').textContent = opts.classList.contains('hidden') ? "▲" : "▼";
             opts.classList.toggle('hidden');
         }
 
@@ -957,8 +952,6 @@
                 const del = document.createElement('button'); del.className = 'card-action btn-delete'; del.innerHTML = '✕'; del.onclick = (e) => deleteItem(item.id, e);
                 const mv = document.createElement('button'); mv.className = 'card-action btn-move'; mv.innerHTML = '⤳'; mv.onclick = (e) => startMoveItem(item, e);
                 const ren = document.createElement('button'); ren.className = 'card-action btn-rename'; ren.innerHTML = '✎'; ren.title = 'Rename'; ren.onclick = (e) => renameItem(item, e);
-                
-                // Inject the clone button mapping parameters
                 const dup = document.createElement('button'); dup.className = 'card-action btn-duplicate'; dup.innerHTML = '❑'; dup.title = 'Duplicate'; dup.onclick = (e) => duplicateItem(item, e);
 
                 if (item.type === 'folder') {
@@ -1052,7 +1045,6 @@
                     alert("Error processing JSON data."); 
                 }
             };
-            getBlob = null;
             r.readAsText(file); input.value = '';
         }
 
