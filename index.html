@@ -89,17 +89,13 @@
         .nav-bar {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 30px;
+            gap: 10px;
+            margin-bottom: 25px;
             font-size: 14px;
             color: var(--text-dim);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            background: rgba(22, 22, 28, 0.4);
-            padding: 12px 16px;
-            border-radius: 6px;
-            border: 1px solid var(--panel-border);
+            background: rgba(21, 21, 24, 0.8);
+            padding: 10px;
+            border-radius: 4px;
         }
 
         .nav-link {
@@ -109,13 +105,11 @@
             background: none;
             border: none;
             padding: 0;
-            font-family: inherit;
             font-size: 14px;
-            transition: color 0.2s;
         }
-        .nav-link:hover { color: #fff; text-shadow: 0 0 8px var(--accent-glow); }
+        .nav-link:hover { text-decoration: underline; }
 
-        .controls { display: flex; gap: 12px; align-items: center; }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
 
         .btn {
             background-color: var(--panel-color);
@@ -183,6 +177,7 @@
         .link-icon { color: #e74c3c; }
         .item-name { font-weight: 600; font-size: 16px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+        /* Action handles permanently mapped on user dashboard views */
         .card-action {
             position: absolute; background: rgba(0, 0, 0, 0.7); border: 1px solid #444;
             color: #aaa; border-radius: 4px; width: 26px; height: 28px; cursor: pointer;
@@ -196,6 +191,10 @@
         .btn-move:hover { background-color: var(--move-color); color: white; border-color: var(--move-color); }
         .btn-rename { top: 8px; right: 38px; font-size: 11px; }
         .btn-rename:hover { background-color: var(--accent-color); color: var(--dustloop-dark); border-color: var(--accent-color); }
+        
+        /* New custom button wrapper styling for the clone handle */
+        .btn-duplicate { top: 8px; left: 38px; font-size: 12px; }
+        .btn-duplicate:hover { background-color: #2ecc71; color: white; border-color: #2ecc71; }
 
         .editor-layout { display: flex; flex-direction: column; gap: 15px; height: calc(100vh - 140px); margin-top: 15px; position: relative; }
         .workspace-dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; min-height: 0; }
@@ -208,7 +207,7 @@
             border-radius: 0 0 6px 6px; color: #f1f1f1; font-family: 'Courier New', Courier, monospace; font-size: 16px;
             padding: 15px; box-sizing: border-box; resize: none; outline: none;
         }
-        .editor-pane:focus { border-color: var(--accent-color); box-shadow: 0 0 10px rgba(255,70,85,0.05); }
+        .editor-pane:focus { border-color: var(--accent-color); }
 
         .infinite-grid-canvas {
             width: 100%; height: 100%; background-color: var(--dustloop-dark); border: 2px solid var(--dustloop-border);
@@ -255,7 +254,6 @@
         .help-content { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; color: var(--text-dim); }
         .help-content code { background: #000; padding: 2px 4px; border-radius: 3px; color: #fff; }
 
-        /* Dictionary Builder Interface Style Handles */
         .dict-builder-box { display: flex; gap: 8px; margin-top: 10px; background: #0c0c0e; padding: 8px; border-radius: 4px; border: 1px solid var(--dustloop-border); width: 100%; box-sizing: border-box; }
         .dict-input { background: #000; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; flex: 1; outline: none; font-size: 13px; }
         .dict-input:focus { border-color: var(--accent-color); }
@@ -359,7 +357,6 @@
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
 
-        // Core base fighting game vocabulary data maps - separators explicitly added as standalone tokens
         const baseFgcWords = [">", ",", "~", "2A", "2B", "2C", "5A", "5B", "5C", "236A", "236B", "236C", "214A", "214B", "214C", "66B", "66C", "iad", "dl.", "(land)", "(delay)"];
         let dynamicallyLearnedTokens = new Set();
         let activeSuggestionIndex = 0;
@@ -367,7 +364,6 @@
         let globalTokenStartOffset = 0;
         let globalTokenEndOffset = 0;
 
-        // Tracking array infrastructure to store preferred move selections over runtime intervals
         let autocompleteWeightsLedger = {};
 
         try {
@@ -376,7 +372,6 @@
                 appData = parsed;
                 if (!appData.backgroundImage) appData.backgroundImage = "";
                 if (parsed.autocompleteWeightsLedger) autocompleteWeightsLedger = parsed.autocompleteWeightsLedger;
-                // Safely load user custom defined phrases out of storage tables
                 if (parsed.userCustomDictionary) {
                     parsed.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));
                 }
@@ -399,7 +394,6 @@
 
         function saveData() {
             appData.autocompleteWeightsLedger = autocompleteWeightsLedger;
-            // Map the set to an array so JSON stringification works cleanly
             appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);
             localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
         }
@@ -464,6 +458,28 @@
             renderGrid();
         }
 
+        // NEW FEATURE ENGINE: Creates a precise clone of selected workspace profiles, deep copying matrices
+        function duplicateItem(item, event) {
+            event.stopPropagation();
+            const currentFolder = getCurrentFolder();
+            
+            // Deep clone object matrix data using JSON string tracking pairs
+            let clonedItem = JSON.parse(JSON.stringify(item));
+            
+            // Re-assign distinct identity references and append tag labels
+            clonedItem.id = item.type + '_' + Date.now();
+            clonedItem.name = `${item.name} - Copy`;
+            
+            // If the item is a file, adjust the inner markdown header to match its copied identity label
+            if (clonedItem.type === 'file' && clonedItem.content.startsWith(`# ${item.name}`)) {
+                clonedItem.content = clonedItem.content.replace(`# ${item.name}`, `# ${clonedItem.name}`);
+            }
+            
+            currentFolder.children.push(clonedItem);
+            saveData();
+            renderGrid();
+        }
+
         function startMoveItem(item, event) {
             event.stopPropagation();
             movingItemPointer = item;
@@ -511,8 +527,6 @@
             document.getElementById('markdown-input').value = fileItem.content;
             document.getElementById('browser-view').classList.add('hidden');
             document.getElementById('editor-view').classList.remove('hidden');
-            
-            parseContextVocabulariesFromActiveFile(fileItem.content);
             applyLeftPaneDisplaySettings();
         }
 
@@ -523,7 +537,6 @@
             }
             activeFilePointer = null;
             document.getElementById('editor-view').classList.add('hidden');
-            document.body.style.backgroundImage = appData.backgroundImage ? `url('${appData.backgroundImage}')` : 'none';
             document.getElementById('browser-view').classList.remove('hidden');
             renderGrid();
         }
@@ -643,7 +656,7 @@
                 } else if (/^##\s(.*$)/.test(line)) {
                     processedHtml += `<h2>${line.replace(/^##\s/, '')}</h2>`;
                 } else if (/^###\s(.*$)/.test(line)) {
-                    processedHtml += `<h3>${line.replace(/^###\s/, '')}</h3>`;
+                    processedHtml += `Camp ${line.replace(/^###\s/, '')}</h3>`;
                 } else if (line.trim() !== "") {
                     processedHtml += `${line}<br>`;
                 } else {
@@ -684,9 +697,23 @@
             renderParsedHtmlStringIntoPreviewPane(rawText);
         }
 
+        function handleMarkdownLinkClick(url, event) {
+            event.preventDefault();
+            const choice = confirm(`Link clicked: ${url}\n\n[OK] -> Open URL\n[Cancel] -> Edit link`);
+            if (choice) {
+                window.open(url, '_blank');
+            } else {
+                const newUrl = prompt("Modify Destination Link String:", url);
+                if (newUrl && newUrl.trim() !== "") {
+                    const editor = document.getElementById('markdown-input');
+                    editor.value = editor.value.replace(url, newUrl.trim());
+                    updateLivePreview();
+                }
+            }
+        }
+
         function parseContextVocabulariesFromActiveFile(textData) {
             if (!textData) return;
-            // Tokenizer splits strictly by space to safeguard punctuation segments as independent chunks
             const blocks = textData.split(/\s+/);
             blocks.forEach(token => {
                 let cleanWord = token.replace(/[\[\]#\-]/g, '').trim();
@@ -709,7 +736,6 @@
             alert(`"${textWord}" successfully registered into your local autocomplete lookup dataset!`);
         }
 
-        // DYNAMIC CHARACTER AGNOSTIC SPECIAL PUNCTUATION AND SPACE SENSITIVE MATRICES INPUT ENGINE
         function handleEditorInput(event) {
             updateLivePreview();
             const editor = event.target;
@@ -725,13 +751,11 @@
             let searchPrefix = "";
             let matchDataset = [];
 
-            // FIXED trigger logic: triggers predictive arrays when space blocks load
             if (charBeforeCursor === " ") {
                 matchDataset = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
                 globalTokenStartOffset = cursor;
                 globalTokenEndOffset = cursor;
             } else {
-                // FIXED lookback engine: special characters like >, , or ~ are captured cleanly as words
                 let startWordIndex = cursor - 1;
                 while (startWordIndex >= 0 && !/\s/.test(val.substring(startWordIndex, startWordIndex + 1))) {
                     startWordIndex--;
@@ -776,7 +800,6 @@
             box.style.bottom = '40px';
         }
 
-        // FIXED: Arrow handling completely prevents native window container scroll breaks
         function handleEditorKeydowns(event) {
             const box = document.getElementById('autocomplete-box');
             if (box.style.display === 'block') {
@@ -810,7 +833,6 @@
             }
             autocompleteWeightsLedger[insertedReplacementString]++;
 
-            // Append spaces after directional nodes or delimiters to expedite notation drafting chains
             let tailSpacer = "";
             if (insertedReplacementString === ">" || insertedReplacementString === ",") {
                 tailSpacer = " ";
@@ -871,7 +893,7 @@
 
         function toggleHelp() {
             const opts = document.getElementById('help-options');
-            document.getElementById('help-toggle-icon').textContent = opts.classList.contains('hidden') ? "▲" : "▼";
+            document.getElementById('help-toggle-icon').textContent = opts.classList.contains('hidden) ? "▲" : "▼";
             opts.classList.toggle('hidden');
         }
 
@@ -935,6 +957,9 @@
                 const del = document.createElement('button'); del.className = 'card-action btn-delete'; del.innerHTML = '✕'; del.onclick = (e) => deleteItem(item.id, e);
                 const mv = document.createElement('button'); mv.className = 'card-action btn-move'; mv.innerHTML = '⤳'; mv.onclick = (e) => startMoveItem(item, e);
                 const ren = document.createElement('button'); ren.className = 'card-action btn-rename'; ren.innerHTML = '✎'; ren.title = 'Rename'; ren.onclick = (e) => renameItem(item, e);
+                
+                // Inject the clone button mapping parameters
+                const dup = document.createElement('button'); dup.className = 'card-action btn-duplicate'; dup.innerHTML = '❑'; dup.title = 'Duplicate'; dup.onclick = (e) => duplicateItem(item, e);
 
                 if (item.type === 'folder') {
                     sq.onclick = () => enterFolder(item);
@@ -947,7 +972,7 @@
                     sq.innerHTML = `<div class="icon link-icon">🔗</div><div class="item-name">${item.name}</div>`;
                 }
 
-                wrapper.appendChild(sq); wrapper.appendChild(del); wrapper.appendChild(mv); wrapper.appendChild(ren); grid.appendChild(wrapper);
+                wrapper.appendChild(sq); wrapper.appendChild(del); wrapper.appendChild(mv); wrapper.appendChild(ren); wrapper.appendChild(dup); grid.appendChild(wrapper);
             });
         }
 
@@ -1027,6 +1052,7 @@
                     alert("Error processing JSON data."); 
                 }
             };
+            getBlob = null;
             r.readAsText(file); input.value = '';
         }
 
