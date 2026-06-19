@@ -20,8 +20,8 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
-            /* FIXED: Explicit containment layout parameters lock background flat across scrolling viewports */
-            background-size: cover !important;
+            /* FIXED: Combined variable metrics to safely override cover behaviors with custom dimension inputs */
+            background-size: var(--user-bg-size, cover) !important;
             background-position: center center !important;
             background-repeat: no-repeat !important;
             background-attachment: fixed !important;
@@ -137,6 +137,7 @@
             background-color: var(--accent-color);
             color: var(--dustloop-dark);
         }
+        .btn-shadow { box-shadow: 0 0 10px rgba(46, 204, 113, 0.2); }
         .btn-utility { border-color: #444; color: var(--text-dim); }
 
         .btn-paste {
@@ -207,7 +208,7 @@
             border-radius: 0 0 6px 6px; color: #f1f1f1; font-family: 'Courier New', Courier, monospace; font-size: 16px;
             padding: 15px; box-sizing: border-box; resize: none; outline: none;
         }
-        .editor-pane:focus { border-color: var(--accent-color); }
+        .editor-pane:focus { border-color: var(--accent-color); box-shadow: 0 0 10px rgba(255,70,85,0.05); }
 
         .infinite-grid-canvas {
             width: 100%; height: 100%; background-color: var(--dustloop-dark); border: 2px solid var(--dustloop-border);
@@ -244,7 +245,7 @@
 
         .autocomplete-suggestions {
             position: absolute; background: #1c1c22; border: 1px solid var(--accent-color);
-            border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 8px 24 rgba(0,0,0,0.6);
         }
         .suggestion-item { padding: 10px 14px; cursor: pointer; font-family: monospace; font-size: 14px; color: #e2e2e7; text-align: left; }
         .suggestion-item:hover, .suggestion-item.active { background: var(--accent-color); color: #0a0a0c; font-weight: bold; }
@@ -257,6 +258,11 @@
         .dict-builder-box { display: flex; gap: 8px; margin-top: 10px; background: #0c0c0e; padding: 8px; border-radius: 4px; border: 1px solid var(--dustloop-border); width: 100%; box-sizing: border-box; }
         .dict-input { background: #000; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; flex: 1; outline: none; font-size: 13px; }
         .dict-input:focus { border-color: var(--accent-color); }
+        
+        /* FIXED: Added styling parameters for the manual background resolution tracking node */
+        .bg-slider-container { display: flex; align-items: center; gap: 10px; background: #0c0c0e; padding: 8px 12px; border-radius: 4px; border: 1px solid var(--dustloop-border); margin-top: 5px; }
+        .bg-range-input { flex: 1; cursor: pointer; accent-color: var(--accent-color); }
+        .bg-label-txt { font-family: monospace; font-size: 12px; color: var(--accent-color); min-width: 45px; text-align: right; }
     </style>
 </head>
 <body>
@@ -346,6 +352,15 @@
                         </div>
                         <hr style="border:0; border-top:1px solid var(--dustloop-border); margin: 5px 0;">
                         <div>
+                            <span style="font-weight:bold; color:#fff;">Wallpaper Aspect Tuning Scale (Full-Screen Manual Override):</span>
+                            <div class="bg-slider-container">
+                                <input type="range" id="bg-size-scaler-track" class="bg-range-input" min="10" max="180" value="100" oninput="executeManualBackgroundArtResizeAction(this.value)">
+                                <span id="bg-size-label-display" class="bg-label-txt">100%</span>
+                                <button class="btn" style="padding: 2px 8px; font-size: 11px;" onclick="resetBackgroundScalingPreference()">Reset</button>
+                            </div>
+                        </div>
+                        <hr style="border:0; border-top:1px solid var(--dustloop-border); margin: 5px 0;">
+                        <div>
                             <span style="font-weight:bold; color:#fff;">Add Custom Dictionary Words:</span>
                             <div class="dict-builder-box">
                                 <input type="text" id="custom-vocab-input" class="dict-input" placeholder="e.g., 236A~B~A~C~236A+D, (land), >, ~">
@@ -388,6 +403,11 @@
                 if (parsed.hasOwnProperty('autocompleteEngineActiveStatus')) {
                     autocompleteEngineActiveStatus = parsed.autocompleteEngineActiveStatus;
                 }
+                
+                // Initialize default database preference values for sizing variables
+                if (parsed.savedWallpaperSizeOverride) {
+                    document.documentElement.style.setProperty('--user-bg-size', parsed.savedWallpaperSizeOverride);
+                }
             } else {
                 throw new Error("Matrix configuration trace execution fail");
             }
@@ -409,8 +429,49 @@
             appData.autocompleteWeightsLedger = autocompleteWeightsLedger;
             appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);
             appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus;
+            
+            // Sync custom scaling metrics cleanly to persistent storage
+            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size');
+            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference;
+            
             localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
         }
+
+        // FIXED: Custom handler logic to apply manual sizing while checking window widths to keep window scaling intact
+        function executeManualBackgroundArtResizeAction(sliderPercentageValue) {
+            const displayLabel = document.getElementById('bg-size-label-display');
+            if (displayLabel) displayLabel.textContent = sliderPercentageValue + "%";
+
+            // If the user shrinks the browser into a side-dock split window, let the layout adapt automatically
+            if (window.innerWidth < 900) {
+                document.documentElement.style.setProperty('--user-bg-size', 'cover');
+                return;
+            }
+
+            // Otherwise, on full screen, use the user's explicit dimension size override
+            let formattedSizingMetric = `100% ${sliderPercentageValue}%`;
+            document.documentElement.style.setProperty('--user-bg-size', formattedSizingMetric);
+            saveData();
+        }
+
+        function resetBackgroundScalingPreference() {
+            document.documentElement.style.removeProperty('--user-bg-size');
+            const slider = document.getElementById('bg-size-scaler-track');
+            const displayLabel = document.getElementById('bg-size-label-display');
+            if (slider) slider.value = 100;
+            if (displayLabel) displayLabel.textContent = "100%";
+            if (appData.savedWallpaperSizeOverride) delete appData.savedWallpaperSizeOverride;
+            saveData();
+        }
+
+        // Watch browser resizing live to drop overrides and snap back to cover layouts when side-window docking
+        window.onresize = function() {
+            if (activeFilePointer && appData.savedWallpaperSizeOverride && window.innerWidth >= 900) {
+                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);
+            } else {
+                document.documentElement.style.setProperty('--user-bg-size', 'cover');
+            }
+        };
 
         function getCurrentFolder() {
             return navigationHistory[navigationHistory.length - 1];
@@ -537,6 +598,15 @@
             document.getElementById('browser-view').classList.add('hidden');
             document.getElementById('editor-view').classList.remove('hidden');
             
+            // Sync slider track layout state cleanly with loaded storage percentages on file open
+            if (appData.savedWallpaperSizeOverride && appData.savedWallpaperSizeOverride !== 'cover') {
+                let parsedNumericMatch = appData.savedWallpaperSizeOverride.match(/\s(\d+)%/);
+                if (parsedNumericMatch) {
+                    document.getElementById('bg-size-scaler-track').value = parsedNumericMatch[1];
+                    document.getElementById('bg-size-label-display').textContent = parsedNumericMatch[1] + "%";
+                }
+            }
+
             parseContextVocabulariesFromActiveFile(fileItem.content);
             applyLeftPaneDisplaySettings();
         }
@@ -706,6 +776,21 @@
             if (activeFilePointer && activeFilePointer.editorMode === 'grid') return;
             const rawText = document.getElementById('markdown-input').value;
             renderParsedHtmlStringIntoPreviewPane(rawText);
+        }
+
+        function handleMarkdownLinkClick(url, event) {
+            event.preventDefault();
+            const choice = confirm(`Link clicked: ${url}\n\n[OK] -> Open URL\n[Cancel] -> Edit link`);
+            if (choice) {
+                window.open(url, '_blank');
+            } else {
+                const newUrl = prompt("Modify Destination Link String:", url);
+                if (newUrl && newUrl.trim() !== "") {
+                    const editor = document.getElementById('markdown-input');
+                    editor.value = editor.value.replace(url, newUrl.trim());
+                    updateLivePreview();
+                }
+            }
         }
 
         function parseContextVocabulariesFromActiveFile(textData) {
@@ -1070,6 +1155,9 @@
                         }
                         if (parsed.hasOwnProperty('autocompleteEngineActiveStatus')) {
                             autocompleteEngineActiveStatus = parsed.autocompleteEngineActiveStatus;
+                        }
+                        if (parsed.savedWallpaperSizeOverride) {
+                            document.documentElement.style.setProperty('--user-bg-size', parsed.savedWallpaperSizeOverride);
                         }
                         if (!appData.backgroundImage && parsed.backgroundImage) {
                             appData.backgroundImage = parsed.backgroundImage;
