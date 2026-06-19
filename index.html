@@ -20,13 +20,15 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
+            /* FIXED: Explicit containment parameters lock background flat across scrolling viewports */
+            background-size: cover !important;
+            background-position: center center !important;
+            background-repeat: no-repeat !important;
+            background-attachment: fixed !important;
             color: var(--text-color);
             margin: 0;
             padding: 20px;
+            min-height: 100vh;
         }
 
         .view-section { display: block; }
@@ -252,6 +254,7 @@
         .help-content { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; color: var(--text-dim); }
         .help-content code { background: #000; padding: 2px 4px; border-radius: 3px; color: #fff; }
 
+        /* Dictionary Builder Interface Style Handles */
         .dict-builder-box { display: flex; gap: 8px; margin-top: 10px; background: #0c0c0e; padding: 8px; border-radius: 4px; border: 1px solid var(--dustloop-border); width: 100%; box-sizing: border-box; }
         .dict-input { background: #000; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; flex: 1; outline: none; font-size: 13px; }
         .dict-input:focus { border-color: var(--accent-color); }
@@ -372,8 +375,6 @@
         let globalTokenEndOffset = 0;
 
         let autocompleteWeightsLedger = {};
-        
-        // Master engine state state tracker flag
         let autocompleteEngineActiveStatus = true;
 
         try {
@@ -385,7 +386,6 @@
                 if (parsed.userCustomDictionary) {
                     parsed.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));
                 }
-                // Load saved engine state preference from previous iterations
                 if (parsed.hasOwnProperty('autocompleteEngineActiveStatus')) {
                     autocompleteEngineActiveStatus = parsed.autocompleteEngineActiveStatus;
                 }
@@ -538,7 +538,6 @@
             document.getElementById('browser-view').classList.add('hidden');
             document.getElementById('editor-view').classList.remove('hidden');
             
-            updateAutocompleteToggleButtonView();
             parseContextVocabulariesFromActiveFile(fileItem.content);
             applyLeftPaneDisplaySettings();
         }
@@ -610,6 +609,7 @@
             }
         }
 
+        // Expanded view tracking layers to prevent breaking your current dataset configurations
         function expandInfiniteCanvasDimension(dimension) {
             if (!activeFilePointer) return;
             if (dimension === 'row') activeFilePointer.gridRowsCount++;
@@ -749,7 +749,6 @@
             alert(`"${textWord}" successfully registered into your local autocomplete lookup dataset!`);
         }
 
-        // MASTER ENGINE TOGGLE SYSTEM
         function toggleMasterAutocompleteState() {
             autocompleteEngineActiveStatus = !autocompleteEngineActiveStatus;
             saveData();
@@ -775,7 +774,6 @@
         function handleEditorInput(event) {
             updateLivePreview();
             
-            // Hard break processing execution thread if the engine master state has been turned off
             if (!autocompleteEngineActiveStatus) return;
 
             const editor = event.target;
@@ -843,15 +841,12 @@
         function handleEditorKeydowns(event) {
             const box = document.getElementById('autocomplete-box');
             
-            // KEYBOARD INTERCEPT: Tab action logic when the suggestion menu is active vs hidden
             if (event.key === 'Tab') {
                 if (box.style.display === 'block') {
-                    // Menu is active -> Accept the currently highlighted combo token suggestion
                     event.preventDefault();
                     const items = box.getElementsByClassName('suggestion-item');
                     if (items[activeSuggestionIndex]) items[activeSuggestionIndex].click();
                 } else {
-                    // Menu is hidden -> Toggle the master autocomplete status safely without inserting spaces
                     event.preventDefault();
                     toggleMasterAutocompleteState();
                 }
