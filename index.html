@@ -20,7 +20,7 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
-            /* FIXED: Explicit containment parameters lock background flat across scrolling viewports */
+            /* FIXED: Explicit containment layout parameters lock background flat across scrolling viewports */
             background-size: cover !important;
             background-position: center center !important;
             background-repeat: no-repeat !important;
@@ -254,7 +254,6 @@
         .help-content { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; color: var(--text-dim); }
         .help-content code { background: #000; padding: 2px 4px; border-radius: 3px; color: #fff; }
 
-        /* Dictionary Builder Interface Style Handles */
         .dict-builder-box { display: flex; gap: 8px; margin-top: 10px; background: #0c0c0e; padding: 8px; border-radius: 4px; border: 1px solid var(--dustloop-border); width: 100%; box-sizing: border-box; }
         .dict-input { background: #000; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; flex: 1; outline: none; font-size: 13px; }
         .dict-input:focus { border-color: var(--accent-color); }
@@ -609,7 +608,6 @@
             }
         }
 
-        // Expanded view tracking layers to prevent breaking your current dataset configurations
         function expandInfiniteCanvasDimension(dimension) {
             if (!activeFilePointer) return;
             if (dimension === 'row') activeFilePointer.gridRowsCount++;
@@ -708,21 +706,6 @@
             if (activeFilePointer && activeFilePointer.editorMode === 'grid') return;
             const rawText = document.getElementById('markdown-input').value;
             renderParsedHtmlStringIntoPreviewPane(rawText);
-        }
-
-        function handleMarkdownLinkClick(url, event) {
-            event.preventDefault();
-            const choice = confirm(`Link clicked: ${url}\n\n[OK] -> Open URL\n[Cancel] -> Edit link`);
-            if (choice) {
-                window.open(url, '_blank');
-            } else {
-                const newUrl = prompt("Modify Destination Link String:", url);
-                if (newUrl && newUrl.trim() !== "") {
-                    const editor = document.getElementById('markdown-input');
-                    editor.value = editor.value.replace(url, newUrl.trim());
-                    updateLivePreview();
-                }
-            }
         }
 
         function parseContextVocabulariesFromActiveFile(textData) {
