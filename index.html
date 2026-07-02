@@ -6,21 +6,29 @@
     <title>The Ultimate Note-Taking Website</title>
     <style>
         :root {
-            --bg-color: #121214;
-            --panel-color: #1a1a1e;
-            --accent-color: #ff4655;
-            --text-color: #ffffff;
+            --bg-color: #121216;
+            --panel-color: #1c1c22;
+            --accent-color: #ffb703;
+            --text-color: #e2e2e7;
             --text-dim: #a0a0a5;
             --danger-color: #e74c3c;
-            --move-color: #3498db;
+            --move-color: #2196f3;
+            --dustloop-dark: #151518;
+            --dustloop-border: #2d2d38;
         }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
+            /* FIXED: Combined variable metrics to safely override cover behaviors with custom dimension inputs */
+            background-size: var(--user-bg-size, cover) !important;
+            background-position: center center !important;
+            background-repeat: no-repeat !important;
+            background-attachment: fixed !important;
             color: var(--text-color);
             margin: 0;
             padding: 20px;
+            min-height: 100vh;
         }
 
         .view-section { display: block; }
@@ -30,12 +38,55 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid var(--panel-color);
+            border-bottom: 2px solid var(--dustloop-border);
             padding-bottom: 15px;
             margin-bottom: 15px;
+            background: rgba(28, 28, 34, 0.85);
+            padding: 15px;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
         }
 
-        h1 { margin: 0; font-size: 24px; letter-spacing: 1px; }
+        h1 { margin: 0; font-size: 24px; letter-spacing: 1px; color: var(--accent-color); font-weight: 700; }
+
+        .search-box {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px 14px;
+            background-color: var(--dustloop-dark);
+            border: 2px solid var(--dustloop-border);
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 20px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .search-box:focus { border-color: var(--accent-color); }
+
+        .search-results-pane {
+            background-color: var(--panel-color);
+            border: 2px solid var(--dustloop-border);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .search-results-pane h3 { margin-top: 0; color: var(--accent-color); }
+        
+        .search-result-item {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            font-family: inherit;
+            color: inherit;
+            padding: 10px;
+            border-bottom: 1px solid var(--dustloop-border);
+            cursor: pointer;
+        }
+        .search-result-item:hover { background-color: rgba(255, 183, 3, 0.1); }
+        .search-path { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
         .nav-bar {
             display: flex;
@@ -44,6 +95,9 @@
             margin-bottom: 25px;
             font-size: 14px;
             color: var(--text-dim);
+            background: rgba(21, 21, 24, 0.8);
+            padding: 10px;
+            border-radius: 4px;
         }
 
         .nav-link {
@@ -57,12 +111,12 @@
         }
         .nav-link:hover { text-decoration: underline; }
 
-        .controls { display: flex; gap: 10px; }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
 
         .btn {
             background-color: var(--panel-color);
             color: white;
-            border: 2px solid #2a2a30;
+            border: 2px solid var(--dustloop-border);
             padding: 10px 16px;
             font-weight: bold;
             border-radius: 4px;
@@ -71,167 +125,144 @@
         }
         .btn:hover { 
             border-color: var(--accent-color);
-            background-color: #1f1f24;
+            background-color: #25252d;
         }
+        .btn-shadow { box-shadow: 0 0 10px rgba(46, 204, 113, 0.2); }
         .btn-main {
-            background-color: var(--accent-color);
+            background-color: #2d2d38;
             border-color: var(--accent-color);
+            color: var(--accent-color);
         }
         .btn-main:hover {
-            background-color: #e03e4b;
-            border-color: #e03e4b;
+            background-color: var(--accent-color);
+            color: var(--dustloop-dark);
         }
+        .btn-shadow { box-shadow: 0 0 10px rgba(46, 204, 113, 0.2); }
         .btn-utility { border-color: #444; color: var(--text-dim); }
-        
-        /* High-visibility active paste button state */
+
         .btn-paste {
             background-color: var(--move-color);
             border-color: var(--move-color);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
             animation: pulse 2s infinite;
         }
-        .btn-paste:hover {
-            background-color: #2980b9;
-            border-color: #2980b9;
-        }
+        .btn-paste:hover { background-color: #2563eb; border-color: #2563eb; }
 
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.4); }
-            70% { box-shadow: 0 0 0 6px rgba(52, 152, 219, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
         }
 
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 20px;
+            background: rgba(21, 21, 24, 0.6);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
         }
 
-        .card-container {
-            position: relative;
-            aspect-ratio: 1 / 1;
-        }
+        .card-container { position: relative; aspect-ratio: 1 / 1; }
 
         .grid-item {
-            width: 100%;
-            height: 100%;
-            background-color: var(--panel-color);
-            border: 2px solid #2a2a30;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: transform 0.1s, border-color 0.2s, background-color 0.2s;
-            padding: 15px;
-            box-sizing: border-box;
-            text-align: center;
-            user-select: none;
-            color: var(--text-color);
-            font-family: inherit;
+            width: 100%; height: 100%; background-color: var(--panel-color); border: 2px solid var(--dustloop-border);
+            border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; transition: transform 0.1s, border-color 0.2s, background-color 0.2s; padding: 15px;
+            box-sizing: border-box; text-align: center; user-select: none; color: var(--text-color); font-family: inherit;
         }
-
-        .grid-item:hover {
-            transform: translateY(-2px);
-            border-color: var(--accent-color);
-            background-color: #1f1f24;
-        }
-
-        /* Gray out a card when it's actively holding the cut state */
-        .grid-item.moving {
-            opacity: 0.4;
-            border-style: dashed;
-            border-color: var(--move-color);
-        }
+        .grid-item:hover { transform: translateY(-2px); border-color: var(--accent-color); background-color: #22222a; }
+        .grid-item.moving { opacity: 0.4; border-style: dashed; border-color: var(--move-color); }
 
         .icon { font-size: 48px; margin-bottom: 10px; }
-        .folder-icon { color: #f4b400; }
-        .file-icon { color: #4ba3ff; }
+        .folder-icon { color: var(--accent-color); }
+        .file-icon { color: #5c78ff; }
+        .link-icon { color: #e74c3c; }
         .item-name { font-weight: 600; font-size: 16px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        /* Action overlays on top of the card boxes */
-        .btn-delete {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #333;
-            color: #888;
-            border-radius: 4px;
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-        .btn-delete:hover {
-            background-color: var(--danger-color);
-            color: white;
-            border-color: var(--danger-color);
+        .card-action {
+            position: absolute; background: rgba(0, 0, 0, 0.7); border: 1px solid #444;
+            color: #aaa; border-radius: 4px; width: 26px; height: 28px; cursor: pointer;
+            font-size: 12px; display: flex; align-items: center; justify-content: center; z-index: 10;
+            opacity: 1 !important; transition: all 0.2s;
         }
 
-        .btn-move {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid #333;
-            color: #888;
-            border-radius: 4px;
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-        .btn-move:hover {
-            background-color: var(--move-color);
-            color: white;
-            border-color: var(--move-color);
-        }
+        .btn-delete { top: 8px; right: 8px; }
+        .btn-delete:hover { background-color: var(--danger-color); color: white; border-color: var(--danger-color); }
+        .btn-move { top: 8px; left: 8px; font-size: 14px; }
+        .btn-move:hover { background-color: var(--move-color); color: white; border-color: var(--move-color); }
+        .btn-rename { top: 8px; right: 38px; font-size: 11px; }
+        .btn-rename:hover { background-color: var(--accent-color); color: var(--dustloop-dark); border-color: var(--accent-color); }
+        .btn-duplicate { top: 8px; left: 38px; font-size: 12px; }
+        .btn-duplicate:hover { background-color: #2ecc71; color: white; border-color: #2ecc71; }
 
-        .editor-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            height: calc(100vh - 120px);
-            margin-top: 15px;
-        }
-
-        .editor-pane {
-            width: 100%;
-            height: 100%;
-            background-color: #0b0b0d;
-            border: 2px solid #2a2a30;
-            border-radius: 6px;
-            color: #e0e0e6;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 16px;
-            padding: 15px;
-            box-sizing: border-box;
-            resize: none;
-            outline: none;
-        }
-        .editor-pane:focus { border-color: var(--accent-color); }
-
-        .preview-pane {
-            background-color: var(--panel-color);
-            border: 2px solid #2a2a30;
-            border-radius: 6px;
-            padding: 20px;
-            box-sizing: border-box;
-            overflow-y: auto;
-        }
+        .editor-layout { display: flex; flex-direction: column; gap: 15px; height: calc(100vh - 140px); margin-top: 15px; position: relative; }
+        .workspace-dual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; min-height: 0; }
         
-        .preview-pane h1 { font-size: 2em; border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 0; }
-        .preview-pane h2 { font-size: 1.5em; border-bottom: 1px solid #222; padding-bottom: 5px; }
-        .preview-pane ul { padding-left: 20px; }
+        .pane-wrapper { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+        .pane-header { background: var(--dustloop-dark); padding: 6px 12px; border: 2px solid var(--dustloop-border); border-bottom: none; border-radius: 4px 4px 0 0; font-size: 12px; font-weight: bold; color: var(--accent-color); display: flex; justify-content: space-between; align-items: center; }
+        
+        .editor-pane {
+            width: 100%; height: 100%; background-color: var(--dustloop-dark); border: 2px solid var(--dustloop-border);
+            border-radius: 0 0 6px 6px; color: #f1f1f1; font-family: 'Courier New', Courier, monospace; font-size: 16px;
+            padding: 15px; box-sizing: border-box; resize: none; outline: none;
+        }
+        .editor-pane:focus { border-color: var(--accent-color); box-shadow: 0 0 10px rgba(255,70,85,0.05); }
+
+        .infinite-grid-canvas {
+            width: 100%; height: 100%; background-color: var(--dustloop-dark); border: 2px solid var(--dustloop-border);
+            border-radius: 0 0 6px 6px; overflow: auto; box-sizing: border-box; padding: 10px;
+        }
+        .infinite-grid-table-layout { border-collapse: collapse; table-layout: fixed; width: max-content; }
+        .infinite-grid-table-layout td {
+            border: 1px solid rgba(255, 255, 255, 0.05); padding: 0; width: 140px; min-width: 140px; max-width: 140px; height: 38px; background-color: #0c0c0e;
+        }
+        .cell-textarea-input {
+            width: 100%; height: 100%; background: transparent; border: none; color: #fff; padding: 8px;
+            font-size: 14px; font-family: inherit; outline: none; box-sizing: border-box; resize: none; overflow: hidden; white-space: nowrap;
+        }
+        .cell-textarea-input:focus {
+            background-color: rgba(255, 183, 3, 0.1); border: 1px solid var(--accent-color);
+        }
+
+        .preview-pane { background-color: var(--panel-color); border: 2px solid var(--dustloop-border); border-radius: 0 0 6px 6px; padding: 20px; box-sizing: border-box; overflow-y: auto; height: 100%; line-height: 1.6; }
+        .preview-pane h1 { font-size: 1.8em; border-bottom: 2px solid var(--accent-color); padding-bottom: 5px; margin-top: 0; color: white; }
+        .preview-pane h2 { font-size: 1.4em; border-bottom: 1px solid var(--dustloop-border); padding-bottom: 5px; color: var(--accent-color); margin-top: 20px; }
+        .preview-pane h3 { font-size: 1.1em; color: #e2e2e7; margin-top: 15px; }
+        .preview-pane ul { padding-left: 20px; margin: 8px 0; }
+        .preview-pane li { margin-bottom: 6px; }
+        .preview-pane a { color: var(--accent-color); text-decoration: underline; cursor: pointer; font-weight: 600; }
+        .preview-pane br { display: block; content: ""; margin-top: 8px; }
+
+        .copy-code-block-card {
+            background-color: #060608; border: 1px solid var(--dustloop-border); border-left: 4px solid var(--accent-color);
+            border-radius: 4px; padding: 12px 16px; margin: 15px 0; display: flex; justify-content: space-between; align-items: center;
+        }
+        .copy-code-text-line { font-family: 'Courier New', Courier, monospace; font-size: 15px; color: #7bf1a8; font-weight: 600; white-space: pre-wrap; word-break: break-all; padding-right: 15px; }
+        .btn-copy-action { background-color: var(--panel-color); border: 1px solid var(--dustloop-border); color: var(--accent-color); padding: 6px 12px; font-family: inherit; font-size: 11px; font-weight: bold; text-transform: uppercase; cursor: pointer; border-radius: 3px; transition: all 0.15s; }
+        .btn-copy-action:hover { background-color: var(--accent-color); color: #000; }
+
+        .autocomplete-suggestions {
+            position: absolute; background: #1c1c22; border: 1px solid var(--accent-color);
+            border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 8px 24 rgba(0,0,0,0.6);
+        }
+        .suggestion-item { padding: 10px 14px; cursor: pointer; font-family: monospace; font-size: 14px; color: #e2e2e7; text-align: left; }
+        .suggestion-item:hover, .suggestion-item.active { background: var(--accent-color); color: #0a0a0c; font-weight: bold; }
+
+        .help-panel { background-color: var(--panel-color); border: 2px solid var(--dustloop-border); border-radius: 6px; padding: 12px; font-size: 13px; }
+        .help-title { font-weight: bold; color: var(--accent-color); cursor: pointer; display: flex; justify-content: space-between; }
+        .help-content { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; color: var(--text-dim); }
+        .help-content code { background: #000; padding: 2px 4px; border-radius: 3px; color: #fff; }
+
+        .dict-builder-box { display: flex; gap: 8px; margin-top: 10px; background: #0c0c0e; padding: 8px; border-radius: 4px; border: 1px solid var(--dustloop-border); width: 100%; box-sizing: border-box; }
+        .dict-input { background: #000; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; flex: 1; outline: none; font-size: 13px; }
+        .dict-input:focus { border-color: var(--accent-color); }
+        
+        /* FIXED: Added styling parameters for the manual background resolution tracking node */
+        .bg-slider-container { display: flex; align-items: center; gap: 10px; background: #0c0c0e; padding: 8px 12px; border-radius: 4px; border: 1px solid var(--dustloop-border); margin-top: 5px; }
+        .bg-range-input { flex: 1; cursor: pointer; accent-color: var(--accent-color); }
+        .bg-label-txt { font-family: monospace; font-size: 12px; color: var(--accent-color); min-width: 45px; text-align: right; }
     </style>
 </head>
 <body>
@@ -243,61 +274,204 @@
                 <button class="btn btn-utility" onclick="exportMetadata()">Export Data</button>
                 <input type="file" id="import-file" style="display: none;" onchange="importMetadata(this)">
                 <button class="btn btn-utility" onclick="document.getElementById('import-file').click()">Import Data</button>
+                <input type="file" id="bg-upload" style="display: none;" accept="image/*" onchange="uploadBackground(this)">
+                <button class="btn btn-utility" onclick="document.getElementById('bg-upload').click()">🖼️ BG Art</button>
                 
                 <button class="btn btn-paste" id="btn-paste" onclick="pasteItem()" style="display: none;">📋 Paste Here</button>
                 <button class="btn btn-main" id="btn-folder" onclick="createNewItem('folder')">+ New Folder</button>
                 <button class="btn" id="btn-file" onclick="createNewItem('file')" style="display: none;">+ New File</button>
+                <button class="btn btn-main" id="btn-link-card" onclick="createNewItem('link')" style="display: none;">🔗 + New Link Card</button>
             </div>
         </header>
+
+        <input type="text" id="searchBar" class="search-box" placeholder="🔍 Search folders and files across the database..." oninput="handleGlobalSearch()">
+        
+        <div id="search-results" class="search-results-pane hidden">
+            <h3>Search Results</h3>
+            <div id="search-results-list"></div>
+        </div>
 
         <div class="nav-bar" id="breadcrumbs"></div>
         <main class="grid" id="folder-grid"></main>
     </div>
 
-
     <div id="editor-view" class="view-section hidden">
         <header>
             <h1 id="editor-file-title">Editing File</h1>
             <div class="controls">
+                <button class="btn btn-main" id="toggle-editor-mode-btn" style="border-color: var(--accent-color); color: var(--accent-color);" onclick="switchLeftPaneEditorMode()">📊 Toggle Editor to Sheets Grid</button>
+                <button class="btn btn-main" style="border-color:#2196f3; color:#2196f3;" onclick="toggleLabVideoPlayer()">🎬 Open Lab Video Player</button>
                 <button class="btn btn-main" onclick="closeEditor()">Save & Exit</button>
             </div>
         </header>
         
-        <div class="editor-container">
-            <textarea id="markdown-input" class="editor-pane" placeholder="Type Markdown here..." oninput="updateLivePreview()"></textarea>
-            <div id="markdown-preview" class="preview-pane"></div>
+        <div class="editor-layout">
+            <div class="workspace-dual-grid">
+                
+                <div class="pane-wrapper" id="left-pane-text-wrapper">
+                    <div class="pane-header">RAW WORKSPACE SPECIFICATION ENGINE</div>
+                    <textarea id="markdown-input" class="editor-pane" placeholder="Type Markdown here... Use [[code]] for quick copy fields." oninput="handleEditorInput(event)" onkeydown="handleEditorKeydowns(event)"></textarea>
+                    <div id="autocomplete-box" class="autocomplete-suggestions"></div>
+                </div>
+
+                <div class="pane-wrapper hidden" id="left-pane-grid-wrapper">
+                    <div class="pane-header">
+                        <span>INFINITE SHEET CANVAS INPUT GRID</span>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn" style="padding: 2px 10px; font-size: 11px;" onclick="expandInfiniteCanvasDimension('row')">+ Row</button>
+                            <button class="btn" style="padding: 2px 10px; font-size: 11px;" onclick="expandInfiniteCanvasDimension('col')">+ Column</button>
+                            <button class="btn" style="padding: 2px 10px; font-size: 11px; background: var(--danger-color); border-color: var(--danger-color);" onclick="shrinkInfiniteCanvasDimension('row')">- Row</button>
+                            <button class="btn" style="padding: 2px 10px; font-size: 11px; background: var(--danger-color); border-color: var(--danger-color);" onclick="shrinkInfiniteCanvasDimension('col')">- Col</button>
+                        </div>
+                    </div>
+                    <div class="infinite-grid-canvas">
+                        <table class="infinite-grid-table-layout">
+                            <tbody id="infinite-canvas-matrix-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="pane-wrapper">
+                    <div class="pane-header">LIVE PREVIEW ENGINE RENDERING FEED</div>
+                    <div id="markdown-preview" class="preview-pane"></div>
+                </div>
+
+            </div>
+
+            <div class="help-panel">
+                <div class="help-title" onclick="toggleHelp()">
+                    <span>💡 Custom Dictionary Builder Module & Formatting Controls</span>
+                    <span id="help-toggle-icon">▲</span>
+                </div>
+                <div id="help-options" class="help-content">
+                    <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px;">
+                        <div>
+                            <span style="font-weight:bold; color:#fff;">Engine Mode Toggle:</span>
+                            <button class="btn btn-shadow" id="master-autocomplete-toggle-btn" style="background:#2ecc71; color:white; border-color:#2ecc71; margin-left: 10px; padding: 4px 12px; font-size:11px;" onclick="toggleMasterAutocompleteState()">Autocomplete: ACTIVE</button>
+                            <span style="color: var(--text-dim); margin-left: 10px; font-size:11px;">(Or press Tab when popup is closed)</span>
+                        </div>
+                        <hr style="border:0; border-top:1px solid var(--dustloop-border); margin: 5px 0;">
+                        <div>
+                            <span style="font-weight:bold; color:#fff;">Wallpaper Aspect Tuning Scale (Full-Screen Manual Override):</span>
+                            <div class="bg-slider-container">
+                                <input type="range" id="bg-size-scaler-track" class="bg-range-input" min="10" max="180" value="100" oninput="executeManualBackgroundArtResizeAction(this.value)">
+                                <span id="bg-size-label-display" class="bg-label-txt">100%</span>
+                                <button class="btn" style="padding: 2px 8px; font-size: 11px;" onclick="resetBackgroundScalingPreference()">Reset</button>
+                            </div>
+                        </div>
+                        <hr style="border:0; border-top:1px solid var(--dustloop-border); margin: 5px 0;">
+                        <div>
+                            <span style="font-weight:bold; color:#fff;">Add Custom Dictionary Words:</span>
+                            <div class="dict-builder-box">
+                                <input type="text" id="custom-vocab-input" class="dict-input" placeholder="e.g., 236A~B~A~C~236A+D, (land), >, ~">
+                                <button class="btn btn-main" style="padding: 4px 12px; font-size:11px;" onclick="registerCustomVocabularyWordViaPanel()">+ Register Word</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
 
     <script>
         let rawData = localStorage.getItem('ultimate_notes_data');
         let appData;
         let activeFilePointer = null; 
-        
-        // Tracking state variables for the clipboard system
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
 
+        // Core base fighting game vocabulary data maps - separators explicitly added as standalone tokens
+        const baseFgcWords = [">", ",", "~", "2A", "2B", "2C", "5A", "5B", "5C", "236A", "236B", "236C", "214A", "214B", "214C", "66B", "66C", "iad", "dl.", "(land)", "(delay)"];
+        let dynamicallyLearnedTokens = new Set();
+        let activeSuggestionIndex = 0;
+        let currentSuggestionsMapping = [];
+        let globalTokenStartOffset = 0;
+        let globalTokenEndOffset = 0;
+
+        let autocompleteWeightsLedger = {};
+        let autocompleteEngineActiveStatus = true;
+
         try {
             let parsed = JSON.parse(rawData);
-            if (parsed && parsed.notebooks && parsed.notebooks.id === 'root') {
+            if (parsed && parsed.notebooks) {
                 appData = parsed;
+                if (!appData.backgroundImage) appData.backgroundImage = "";
+                if (parsed.autocompleteWeightsLedger) autocompleteWeightsLedger = parsed.autocompleteWeightsLedger;
+                if (parsed.userCustomDictionary) {
+                    parsed.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));
+                }
+                if (parsed.hasOwnProperty('autocompleteEngineActiveStatus')) {
+                    autocompleteEngineActiveStatus = parsed.autocompleteEngineActiveStatus;
+                }
+                
+                // Initialize default database preference values for sizing variables
+                if (parsed.savedWallpaperSizeOverride) {
+                    document.documentElement.style.setProperty('--user-bg-size', parsed.savedWallpaperSizeOverride);
+                }
             } else {
-                throw new Error("Old structure detected");
+                throw new Error("Matrix configuration trace execution fail");
             }
         } catch(e) {
             appData = {
-                notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] }
+                notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] },
+                backgroundImage: ""
             };
-            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
+            saveData();
+        }
+
+        if (appData.backgroundImage) {
+            document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
         }
 
         let navigationHistory = [appData.notebooks];
 
         function saveData() {
+            appData.autocompleteWeightsLedger = autocompleteWeightsLedger;
+            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);
+            appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus;
+            
+            // Sync custom scaling metrics cleanly to persistent storage
+            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size');
+            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference;
+            
             localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
         }
+
+        // FIXED: Custom handler logic to apply manual sizing while checking window widths to keep window scaling intact
+        function executeManualBackgroundArtResizeAction(sliderPercentageValue) {
+            const displayLabel = document.getElementById('bg-size-label-display');
+            if (displayLabel) displayLabel.textContent = sliderPercentageValue + "%";
+
+            // If the user shrinks the browser into a side-dock split window, let the layout adapt automatically
+            if (window.innerWidth < 900) {
+                document.documentElement.style.setProperty('--user-bg-size', 'cover');
+                return;
+            }
+
+            // Otherwise, on full screen, use the user's explicit dimension size override
+            let formattedSizingMetric = `100% ${sliderPercentageValue}%`;
+            document.documentElement.style.setProperty('--user-bg-size', formattedSizingMetric);
+            saveData();
+        }
+
+        function resetBackgroundScalingPreference() {
+            document.documentElement.style.removeProperty('--user-bg-size');
+            const slider = document.getElementById('bg-size-scaler-track');
+            const displayLabel = document.getElementById('bg-size-label-display');
+            if (slider) slider.value = 100;
+            if (displayLabel) displayLabel.textContent = "100%";
+            if (appData.savedWallpaperSizeOverride) delete appData.savedWallpaperSizeOverride;
+            saveData();
+        }
+
+        // Watch browser resizing live to drop overrides and snap back to cover layouts when side-window docking
+        window.onresize = function() {
+            if (activeFilePointer && appData.savedWallpaperSizeOverride && window.innerWidth >= 900) {
+                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);
+            } else {
+                document.documentElement.style.setProperty('--user-bg-size', 'cover');
+            }
+        };
 
         function getCurrentFolder() {
             return navigationHistory[navigationHistory.length - 1];
@@ -305,27 +479,31 @@
 
         function createNewItem(type) {
             const currentFolder = getCurrentFolder();
-            const promptMsg = type === 'folder' ? "Enter folder name:" : "Enter file name:";
-            const name = prompt(promptMsg);
+            let promptMsg = "Enter name:";
+            if (type === 'folder') promptMsg = "Enter folder name:";
+            if (type === 'file') promptMsg = "Enter file name:";
+            if (type === 'link') promptMsg = "Enter Shortcut Link Display Name:";
             
+            const name = prompt(promptMsg);
             if (!name || name.trim() === "") return;
 
-            const newItem = {
-                id: type + '_' + Date.now(),
-                name: name.trim(),
-                type: type
-            };
+            const newItem = { id: type + '_' + Date.now(), name: name.trim(), type: type };
 
             if (type === 'folder') {
                 newItem.children = [];
+            } else if (type === 'link') {
+                const destination = prompt("Enter target URL:");
+                if (!destination) return;
+                newItem.url = destination.trim();
             } else {
-                newItem.content = "# " + newItem.name + "\nWrite your tech notes here...";
+                newItem.editorMode = 'text'; 
+                newItem.gridRowsCount = 4;   
+                newItem.gridColsCount = 4;   
+                newItem.canvasMatrix = {};   
+                newItem.content = "# " + newItem.name + "\n## Notes\n- Add technical insights here...";
             }
 
-            if (!currentFolder.children) {
-                currentFolder.children = [];
-            }
-
+            if (!currentFolder.children) currentFolder.children = [];
             currentFolder.children.push(newItem);
             saveData();
             renderGrid();
@@ -334,20 +512,44 @@
         function deleteItem(itemId, event) {
             event.stopPropagation(); 
             if (!confirm("Are you sure you want to delete this item?")) return;
-
             const currentFolder = getCurrentFolder();
             currentFolder.children = currentFolder.children.filter(item => item.id !== itemId);
-            
-            // Clear moving reference if the cut item gets deleted directly
-            if (movingItemPointer && movingItemPointer.id === itemId) {
-                cancelMove();
-            }
-
+            if (movingItemPointer && movingItemPointer.id === itemId) cancelMove();
             saveData();
             renderGrid();
         }
 
-        // Stores target item and its directory source location into memory
+        function renameItem(item, event) {
+            event.stopPropagation();
+            const currentName = item.name;
+            const targetName = prompt(`Modify descriptor text for "${currentName}":`, currentName);
+            if (!targetName || targetName.trim() === "" || targetName.trim() === currentName) return;
+
+            item.name = targetName.trim();
+            if (item.type === 'file' && item.content.startsWith(`# ${currentName}`)) {
+                item.content = item.content.replace(`# ${currentName}`, `# ${item.name}`);
+            }
+            saveData();
+            renderGrid();
+        }
+
+        function duplicateItem(item, event) {
+            event.stopPropagation();
+            const currentFolder = getCurrentFolder();
+            let clonedItem = JSON.parse(JSON.stringify(item));
+            
+            clonedItem.id = item.type + '_' + Date.now();
+            clonedItem.name = `${item.name} - Copy`;
+            
+            if (clonedItem.type === 'file' && clonedItem.content.startsWith(`# ${item.name}`)) {
+                clonedItem.content = clonedItem.content.replace(`# ${item.name}`, `# ${clonedItem.name}`);
+            }
+            
+            currentFolder.children.push(clonedItem);
+            saveData();
+            renderGrid();
+        }
+
         function startMoveItem(item, event) {
             event.stopPropagation();
             movingItemPointer = item;
@@ -355,71 +557,58 @@
             renderGrid();
         }
 
-        // Commits moving item to target active folder array structure
         function pasteItem() {
             if (!movingItemPointer) return;
-
             const targetFolder = getCurrentFolder();
-
-            // Self-nesting prevention check rule
-            if (movingItemPointer.id === targetFolder.id) {
-                alert("Error: You can't paste a folder inside itself!");
+            if (movingItemPointer.id === targetFolder.id || isDescendant(movingItemPointer, targetFolder)) {
+                alert("Error: Nesting operations invalid.");
                 cancelMove();
                 return;
             }
-
-            // Descendant nesting validation helper check
-            if (isDescendant(movingItemPointer, targetFolder)) {
-                alert("Error: You cannot move a parent folder inside one of its own sub-folders!");
-                cancelMove();
-                return;
-            }
-
-            // Remove from original directory array container mapping
             const index = movingItemParentArrayRef.indexOf(movingItemPointer);
-            if (index > -1) {
-                movingItemParentArrayRef.splice(index, 1);
-            }
-
-            // Inject into target directory container setup mapping
+            if (index > -1) movingItemParentArrayRef.splice(index, 1);
             if (!targetFolder.children) targetFolder.children = [];
             targetFolder.children.push(movingItemPointer);
-
-            // Clean tracking state allocations
             movingItemPointer = null;
             movingItemParentArrayRef = null;
-
             saveData();
             renderGrid();
         }
 
-        // Recursively ensures deep structural loops are mathematically impossible
         function isDescendant(parentFolder, targetFolder) {
             if (parentFolder.type !== 'folder' || !parentFolder.children) return false;
-            
             for (let child of parentFolder.children) {
                 if (child.id === targetFolder.id) return true;
-                if (child.type === 'folder') {
-                    if (isDescendant(child, targetFolder)) return true;
-                }
+                if (child.type === 'folder' && isDescendant(child, targetFolder)) return true;
             }
             return false;
         }
 
-        function cancelMove() {
-            movingItemPointer = null;
-            movingItemParentArrayRef = null;
-            renderGrid();
-        }
+        function cancelMove() { movingItemPointer = null; movingItemParentArrayRef = null; renderGrid(); }
 
         function openEditor(fileItem) {
             activeFilePointer = fileItem;
-            document.getElementById('editor-file-title').textContent = `EDITING // ${fileItem.name}`;
+            if (!activeFilePointer.editorMode) activeFilePointer.editorMode = 'text';
+            if (!activeFilePointer.gridRowsCount) activeFilePointer.gridRowsCount = 4;
+            if (!activeFilePointer.gridColsCount) activeFilePointer.gridColsCount = 4;
+            if (!activeFilePointer.canvasMatrix) activeFilePointer.canvasMatrix = {};
+
+            document.getElementById('editor-file-title').textContent = `EDITING FILE // ${fileItem.name.toUpperCase()}`;
             document.getElementById('markdown-input').value = fileItem.content;
-            
             document.getElementById('browser-view').classList.add('hidden');
             document.getElementById('editor-view').classList.remove('hidden');
-            updateLivePreview();
+            
+            // Sync slider track layout state cleanly with loaded storage percentages on file open
+            if (appData.savedWallpaperSizeOverride && appData.savedWallpaperSizeOverride !== 'cover') {
+                let parsedNumericMatch = appData.savedWallpaperSizeOverride.match(/\s(\d+)%/);
+                if (parsedNumericMatch) {
+                    document.getElementById('bg-size-scaler-track').value = parsedNumericMatch[1];
+                    document.getElementById('bg-size-label-display').textContent = parsedNumericMatch[1] + "%";
+                }
+            }
+
+            parseContextVocabulariesFromActiveFile(fileItem.content);
+            applyLeftPaneDisplaySettings();
         }
 
         function closeEditor() {
@@ -433,177 +622,560 @@
             renderGrid();
         }
 
-        function updateLivePreview() {
-            const rawText = document.getElementById('markdown-input').value;
+        function switchLeftPaneEditorMode() {
+            if (!activeFilePointer) return;
+            activeFilePointer.editorMode = activeFilePointer.editorMode === 'text' ? 'grid' : 'text';
+            applyLeftPaneDisplaySettings();
+        }
+
+        function applyLeftPaneDisplaySettings() {
+            const modeBtn = document.getElementById('toggle-editor-mode-btn');
+            const textWrapper = document.getElementById('left-pane-text-wrapper');
+            const gridWrapper = document.getElementById('left-pane-grid-wrapper');
+
+            if (activeFilePointer.editorMode === 'grid') {
+                modeBtn.textContent = "📄 Toggle Editor to Text Mode";
+                textWrapper.classList.add('hidden');
+                gridWrapper.classList.remove('hidden');
+                buildInfiniteGridCanvasMatrixHTML();
+            } else {
+                modeBtn.textContent = "📊 Toggle Editor to Sheets Grid";
+                gridWrapper.classList.add('hidden');
+                textWrapper.classList.remove('hidden');
+                updateLivePreview();
+            }
+        }
+
+        function buildInfiniteGridCanvasMatrixHTML() {
+            const tbody = document.getElementById('infinite-canvas-matrix-body');
+            tbody.innerHTML = '';
+
+            for (let r = 0; r < activeFilePointer.gridRowsCount; r++) {
+                const tr = document.createElement('tr');
+                for (let c = 0; c < activeFilePointer.gridColsCount; c++) {
+                    const td = document.createElement('td');
+                    const cellKey = `${r}_${c}`;
+                    const cellValue = activeFilePointer.canvasMatrix[cellKey] || '';
+
+                    const cellInput = document.createElement('textarea');
+                    cellInput.className = 'cell-textarea-input';
+                    cellInput.value = cellValue;
+                    cellInput.placeholder = '...';
+                    
+                    cellInput.oninput = (e) => {
+                        activeFilePointer.canvasMatrix[cellKey] = e.target.value;
+                        saveData();
+                        updateLivePreviewFromActiveFocusCell(e.target.value);
+                    };
+                    cellInput.onfocus = (e) => {
+                        updateLivePreviewFromActiveFocusCell(e.target.value);
+                    };
+
+                    td.appendChild(cellInput);
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            }
+        }
+
+        function expandInfiniteCanvasDimension(dimension) {
+            if (!activeFilePointer) return;
+            if (dimension === 'row') activeFilePointer.gridRowsCount++;
+            if (dimension === 'col') activeFilePointer.gridColsCount++;
+            saveData();
+            buildInfiniteGridCanvasMatrixHTML();
+        }
+
+        function shrinkInfiniteCanvasDimension(dimension) {
+            if (!activeFilePointer) return;
+            if (dimension === 'row') {
+                if (activeFilePointer.gridRowsCount <= 1) return;
+                const targetRowIdx = activeFilePointer.gridRowsCount - 1;
+                if (!confirm(`Delete Row ${targetRowIdx + 1}? Cells inside will be lost.`)) return;
+                for (let c = 0; c < activeFilePointer.gridColsCount; c++) { delete activeFilePointer.canvasMatrix[`${targetRowIdx}_${c}`]; }
+                activeFilePointer.gridRowsCount--;
+            }
+            if (dimension === 'col') {
+                if (activeFilePointer.gridColsCount <= 1) return;
+                const targetColIdx = activeFilePointer.gridColsCount - 1;
+                if (!confirm(`Delete Column ${targetColIdx + 1}? Cells inside will be lost.`)) return;
+                for (let r = 0; r < activeFilePointer.gridRowsCount; r++) { delete activeFilePointer.canvasMatrix[`${r}_${targetColIdx}`]; }
+                activeFilePointer.gridColsCount--;
+            }
+            saveData();
+            buildInfiniteGridCanvasMatrixHTML();
+            document.getElementById('markdown-preview').innerHTML = ''; 
+        }
+
+        function updateLivePreviewFromActiveFocusCell(text) {
+            renderParsedHtmlStringIntoPreviewPane(text);
+        }
+
+        function renderParsedHtmlStringIntoPreviewPane(rawText) {
             const previewPane = document.getElementById('markdown-preview');
-            
-            let html = rawText
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;");
+            const lines = rawText.split('\n');
+            let processedHtml = "";
+            let insideListBlock = false;
 
-            html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-            html = html.replace(/^## (.*$)/gim, '<h2>$2</h2>');
-            html = html.replace(/^\s*-\s*(.*$)/gim, '<li>$1</li>');
-            html = html.replace(/^\s*\*\s*(.*$)/gim, '<li>$1</li>');
-            html = html.replace(/\n/g, '<br>');
+            lines.forEach(line => {
+                const isBulletRow = /^\s*[-\*]\s*(.*$)/.test(line);
 
-            if (html.includes('<li>')) {
-                html = html.replace(/(<li>.*<\/li>)/gim, '<ul>$1</ul>');
+                if (insideListBlock && !isBulletRow && line.trim() !== "") {
+                    processedHtml += "</ul>";
+                    insideListBlock = false;
+                }
+
+                if (isBulletRow) {
+                    const matches = line.match(/^\s*[-\*]\s*(.*$)/);
+                    if (!insideListBlock) {
+                        processedHtml += "<ul>";
+                        insideListBlock = true;
+                    }
+                    processedHtml += `<li>${matches[1]}</li>`;
+                } else if (/^#\s(.*$)/.test(line)) {
+                    processedHtml += `<h1>${line.replace(/^#\s/, '')}</h1>`;
+                } else if (/^##\s(.*$)/.test(line)) {
+                    processedHtml += `<h2>${line.replace(/^##\s/, '')}</h2>`;
+                } else if (/^###\s(.*$)/.test(line)) {
+                    processedHtml += `<h3>${line.replace(/^###\s/, '')}</h3>`;
+                } else if (line.trim() !== "") {
+                    processedHtml += `${line}<br>`;
+                } else {
+                    processedHtml += "<br>";
+                }
+            });
+
+            if (insideListBlock) {
+                processedHtml += "</ul>";
             }
 
-            previewPane.innerHTML = html;
+            processedHtml = processedHtml.replace(/\[(.*?)\]\((.*?)\)/gim, '<a onclick="handleMarkdownLinkClick(\'$2\', event)">$1</a>');
+
+            processedHtml = processedHtml.replace(/\[\[(.*?)\]\]/gim, function(match, comboString) {
+                const escapedCombo = comboString.replace(/'/g, "\\'");
+                return `
+                    <div class="copy-code-block-card">
+                        <div class="copy-code-text-line">${comboString}</div>
+                        <button class="btn-copy-action" onclick="executeQuickClipboardCopyAction('${escapedCombo}')">Copy Combo</button>
+                    </div>
+                `;
+            });
+
+            previewPane.innerHTML = processedHtml;
         }
 
-        function enterFolder(folder) {
-            navigationHistory.push(folder);
-            renderGrid();
+        function executeQuickClipboardCopyAction(textToCopy) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                alert(`Combo successfully copied to your system clipboard:\n"${textToCopy}"`);
+            }).catch(err => {
+                console.error("Clipboard copy failure:", err);
+            });
         }
 
-        function navigateTo(index) {
-            navigationHistory = navigationHistory.slice(0, index + 1);
-            renderGrid();
+        function updateLivePreview() {
+            if (activeFilePointer && activeFilePointer.editorMode === 'grid') return;
+            const rawText = document.getElementById('markdown-input').value;
+            renderParsedHtmlStringIntoPreviewPane(rawText);
         }
+
+        function handleMarkdownLinkClick(url, event) {
+            event.preventDefault();
+            const choice = confirm(`Link clicked: ${url}\n\n[OK] -> Open URL\n[Cancel] -> Edit link`);
+            if (choice) {
+                window.open(url, '_blank');
+            } else {
+                const newUrl = prompt("Modify Destination Link String:", url);
+                if (newUrl && newUrl.trim() !== "") {
+                    const editor = document.getElementById('markdown-input');
+                    editor.value = editor.value.replace(url, newUrl.trim());
+                    updateLivePreview();
+                }
+            }
+        }
+
+        function parseContextVocabulariesFromActiveFile(textData) {
+            if (!textData) return;
+            const blocks = textData.split(/\s+/);
+            blocks.forEach(token => {
+                let cleanWord = token.replace(/[\[\]#\-]/g, '').trim();
+                if (cleanWord.length >= 1 && !baseFgcWords.includes(cleanWord)) {
+                    dynamicallyLearnedTokens.add(cleanWord);
+                }
+            });
+        }
+
+        function registerCustomVocabularyWordViaPanel() {
+            const inputField = document.getElementById('custom-vocab-input');
+            const textWord = inputField.value.trim();
+            if (!textWord) return;
+
+            dynamicallyLearnedTokens.add(textWord);
+            autocompleteWeightsLedger[textWord] = (autocompleteWeightsLedger[textWord] || 0) + 5;
+            
+            saveData();
+            inputField.value = '';
+            alert(`"${textWord}" successfully registered into your local autocomplete lookup dataset!`);
+        }
+
+        function toggleMasterAutocompleteState() {
+            autocompleteEngineActiveStatus = !autocompleteEngineActiveStatus;
+            saveData();
+            updateAutocompleteToggleButtonView();
+            if (!autocompleteEngineActiveStatus) {
+                document.getElementById('autocomplete-box').style.display = 'none';
+            }
+        }
+
+        function updateAutocompleteToggleButtonView() {
+            const btn = document.getElementById('master-autocomplete-toggle-btn');
+            if (autocompleteEngineActiveStatus) {
+                btn.textContent = "Autocomplete: ACTIVE";
+                btn.style.background = "#2ecc71";
+                btn.style.borderColor = "#2ecc71";
+            } else {
+                btn.textContent = "Autocomplete: SILENCED";
+                btn.style.background = "#e74c3c";
+                btn.style.borderColor = "#e74c3c";
+            }
+        }
+
+        function handleEditorInput(event) {
+            updateLivePreview();
+            
+            if (!autocompleteEngineActiveStatus) return;
+
+            const editor = event.target;
+            const val = editor.value;
+            const cursor = editor.selectionStart;
+            const box = document.getElementById('autocomplete-box');
+
+            parseContextVocabulariesFromActiveFile(val);
+
+            if (cursor === 0) { box.style.display = 'none'; return; }
+
+            const charBeforeCursor = val.substring(cursor - 1, cursor);
+            let searchPrefix = "";
+            let matchDataset = [];
+
+            if (charBeforeCursor === " ") {
+                matchDataset = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
+                globalTokenStartOffset = cursor;
+                globalTokenEndOffset = cursor;
+            } else {
+                let startWordIndex = cursor - 1;
+                while (startWordIndex >= 0 && !/\s/.test(val.substring(startWordIndex, startWordIndex + 1))) {
+                    startWordIndex--;
+                }
+                startWordIndex++;
+                searchPrefix = val.substring(startWordIndex, cursor);
+
+                if (!searchPrefix) { box.style.display = 'none'; return; }
+
+                const combinedDataset = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
+                matchDataset = combinedDataset.filter(word => 
+                    word.toLowerCase().startsWith(searchPrefix.toLowerCase())
+                );
+                
+                globalTokenStartOffset = startWordIndex;
+                globalTokenEndOffset = cursor;
+            }
+
+            if (matchDataset.length === 0) { box.style.display = 'none'; return; }
+
+            matchDataset.sort((a, b) => {
+                const weightA = autocompleteWeightsLedger[a] || 0;
+                const weightB = autocompleteWeightsLedger[b] || 0;
+                return weightB - weightA;
+            });
+
+            currentSuggestionsMapping = matchDataset.slice(0, 3);
+
+            box.innerHTML = '';
+            activeSuggestionIndex = 0;
+            
+            currentSuggestionsMapping.forEach((str, i) => {
+                const div = document.createElement('div');
+                div.className = `suggestion-item ${i === 0 ? 'active' : ''}`;
+                div.textContent = str;
+                div.onclick = () => insertAutoCompleteSuggestion(str);
+                box.appendChild(div);
+            });
+
+            box.style.display = 'block';
+            box.style.left = '35px';
+            box.style.bottom = '40px';
+        }
+
+        function handleEditorKeydowns(event) {
+            const box = document.getElementById('autocomplete-box');
+            
+            if (event.key === 'Tab') {
+                if (box.style.display === 'block') {
+                    event.preventDefault();
+                    const items = box.getElementsByClassName('suggestion-item');
+                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].click();
+                } else {
+                    event.preventDefault();
+                    toggleMasterAutocompleteState();
+                }
+                return;
+            }
+
+            if (box.style.display === 'block') {
+                const items = box.getElementsByClassName('suggestion-item');
+                
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault(); 
+                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.remove('active');
+                    activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
+                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.add('active');
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault(); 
+                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.remove('active');
+                    activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
+                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.add('active');
+                } else if (event.key === 'Enter') {
+                    event.preventDefault();
+                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].click();
+                } else if (event.key === 'Escape') {
+                    box.style.display = 'none';
+                }
+            }
+        }
+
+        function insertAutoCompleteSuggestion(insertedReplacementString) {
+            const editor = document.getElementById('markdown-input');
+            const val = editor.value;
+            
+            if (!autocompleteWeightsLedger[insertedReplacementString]) {
+                autocompleteWeightsLedger[insertedReplacementString] = 0;
+            }
+            autocompleteWeightsLedger[insertedReplacementString]++;
+
+            let tailSpacer = "";
+            if (insertedReplacementString === ">" || insertedReplacementString === ",") {
+                tailSpacer = " ";
+            }
+
+            const transformedToken = insertedReplacementString + tailSpacer;
+            editor.value = val.substring(0, globalTokenStartOffset) + transformedToken + val.substring(globalTokenEndOffset);
+            
+            const nextCursorFocusPos = globalTokenStartOffset + transformedToken.length;
+            editor.setSelectionRange(nextCursorFocusPos, nextCursorFocusPos);
+            
+            document.getElementById('autocomplete-box').style.display = 'none';
+            editor.focus();
+            saveData(); 
+            updateLivePreview();
+        }
+
+        function handleGlobalSearch() {
+            const query = document.getElementById('searchBar').value.toLowerCase().trim();
+            const fontPane = document.getElementById('search-results');
+            const GrandpaList = document.getElementById('search-results-list');
+            
+            if (!query) { fontPane.classList.add('hidden'); return; }
+            GrandpaList.innerHTML = '';
+            let matches = [];
+
+            function crawl(item, currentPath) {
+                if (item.id !== 'root' && item.name.toLowerCase().includes(query)) matches.push({ item: item, path: currentPath.concat(item) });
+                if (item.children) item.children.forEach(child => crawl(child, currentPath.concat(item)));
+            }
+            crawl(appData.notebooks, []);
+
+            if (matches.length === 0) {
+                GrandpaList.innerHTML = `<p style="color: var(--text-dim); font-size:14px;">No matches found.</p>`;
+            } else {
+                matches.forEach(match => {
+                    const btn = document.createElement('button');
+                    btn.className = 'search-result-item';
+                    const pathString = match.path.map(p => p.name).join(' ➔ ');
+                    let icon = '📁';
+                    if (match.item.type === 'file') icon = '📄';
+                    if (match.item.type === 'link') icon = '🔗';
+
+                    btn.innerHTML = `<div><strong>${icon} ${match.item.name}</strong></div><div class="search-path">${pathString}</div>`;
+                    btn.onclick = () => {
+                        navigationHistory = match.path.slice(0, -1);
+                        document.getElementById('searchBar').value = '';
+                        fontPane.classList.add('hidden');
+                        if (match.item.type === 'folder') enterFolder(match.item);
+                        else if (match.item.type === 'file') { navigationHistory.push(getCurrentFolder()); openEditor(match.item); }
+                        else { enterFolder(getCurrentFolder()); }
+                    };
+                    GrandpaList.appendChild(btn);
+                });
+            }
+            fontPane.classList.remove('hidden');
+        }
+
+        function toggleHelp() {
+            const opts = document.getElementById('help-options');
+            document.getElementById('help-toggle-icon').textContent = opts.classList.contains('hidden') ? "▲" : "▼";
+            opts.classList.toggle('hidden');
+        }
+
+        function uploadBackground(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    appData.backgroundImage = e.target.result;
+                    document.body.style.backgroundImage = `url('${e.target.result}')`;
+                    saveData();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function enterFolder(folder) { navigationHistory.push(folder); renderGrid(); }
+        function navigateTo(index) { navigationHistory = navigationHistory.slice(0, index + 1); renderGrid(); }
 
         function updateControlButtons() {
-            const currentFolder = getCurrentFolder();
-            const fileBtn = document.getElementById('btn-file');
-            const folderBtn = document.getElementById('btn-folder');
-            const pasteBtn = document.getElementById('btn-paste');
-
-            if (currentFolder.id === 'root') {
-                fileBtn.style.display = 'none';
-                folderBtn.textContent = '+ New Folder';
-            } else {
-                fileBtn.style.display = 'inline-block';
-                folderBtn.textContent = '+ New Sub-Folder';
-            }
-
-            // Toggle global paste capability button rendering visibility
-            if (movingItemPointer) {
-                pasteBtn.style.display = 'inline-block';
-            } else {
-                pasteBtn.style.display = 'none';
-            }
-        }
-
-        function exportMetadata() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "ultimate_notes_backup.json");
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-
-        function importMetadata(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const parsedData = JSON.parse(e.target.result);
-                    if (parsedData.notebooks && parsedData.notebooks.id === 'root') {
-                        appData = parsedData;
-                        navigationHistory = [appData.notebooks];
-                        cancelMove(); // Wipe old tracking clipboard data maps
-                        saveData();
-                        renderGrid();
-                        alert("Metadata imported successfully!");
-                    } else {
-                        alert("Invalid backup file structure.");
-                    }
-                } catch (err) {
-                    alert("Error reading file.");
-                }
-            };
-            reader.readAsText(file);
-            input.value = '';
+            const folder = getCurrentFolder();
+            const rootLock = folder.id === 'root';
+            
+            document.getElementById('btn-file').style.display = rootLock ? 'none' : 'inline-block';
+            document.getElementById('btn-link-card').style.display = rootLock ? 'none' : 'inline-block';
+            document.getElementById('btn-folder').textContent = rootLock ? '+ New Folder' : '+ New Sub-Folder';
+            document.getElementById('btn-paste').style.display = movingItemPointer ? 'inline-block' : 'none';
         }
 
         function renderBreadcrumbs() {
-            const container = document.getElementById('breadcrumbs');
-            container.innerHTML = '';
-            
+            const container = document.getElementById('breadcrumbs'); container.innerHTML = '';
             navigationHistory.forEach((folder, index) => {
-                const isLast = index === navigationHistory.length - 1;
-                if (index > 0) {
-                    container.appendChild(document.createTextNode(' / '));
-                }
-                
-                const span = document.createElement('button');
-                span.textContent = folder.name;
-                if (!isLast) {
-                    span.className = 'nav-link';
-                    span.onclick = () => navigateTo(index);
-                } else {
-                    span.style.cssText = "background:none;border:none;color:white;padding:0;font-size:14px;font-weight:bold;";
-                }
-                container.appendChild(span);
+                if (index > 0) container.appendChild(document.createTextNode(' / '));
+                const btn = document.createElement('button');
+                btn.textContent = folder.name;
+                if (index !== navigationHistory.length - 1) { btn.className = 'nav-link'; btn.onclick = () => navigateTo(index); }
+                else { btn.style.cssText = "background:none;border:none;color:white;padding:0;font-size:14px;font-weight:bold;"; }
+                container.appendChild(btn);
             });
         }
 
         function renderGrid() {
             const grid = document.getElementById('folder-grid');
-            grid.innerHTML = ''; 
+            grid.innerHTML = '';
             
             renderBreadcrumbs();
             updateControlButtons();
+            const folder = getCurrentFolder();
 
-            const currentFolder = getCurrentFolder();
-
-            if (!currentFolder.children || currentFolder.children.length === 0) {
-                grid.innerHTML = `<p style="color: var(--text-dim);">This directory is empty.</p>`;
+            if (!folder.children || folder.children.length === 0) {
+                grid.innerHTML = `<p style="color: var(--text-dim); grid-column: 1/-1; text-align: center; margin-top: 40px; font-weight: 600;">Directory empty. Initialize your workspace files above.</p>`;
                 return;
             }
 
-            currentFolder.children.forEach(item => {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'card-container';
+            grid.style.display = 'grid';
+            folder.children.forEach(item => {
+                const wrapper = document.createElement('div'); wrapper.className = 'card-container';
+                const sq = document.createElement('button'); sq.className = 'grid-item';
+                if (movingItemPointer && movingItemPointer.id === item.id) sq.classList.add('moving');
 
-                const square = document.createElement('button');
-                square.className = 'grid-item';
-                
-                // Highlight item if it's currently selected to be moved
-                if (movingItemPointer && movingItemPointer.id === item.id) {
-                    square.classList.add('moving');
-                }
-
-                // Delete overlay button setup
-                const delBtn = document.createElement('button');
-                delBtn.className = 'btn-delete';
-                delBtn.innerHTML = '✕';
-                delBtn.title = 'Delete';
-                delBtn.onclick = (e) => deleteItem(item.id, e);
-
-                // Semantic Move overlay button setup
-                const moveBtn = document.createElement('button');
-                moveBtn.className = 'btn-move';
-                moveBtn.innerHTML = '⤳';
-                moveBtn.title = 'Move';
-                moveBtn.onclick = (e) => startMoveItem(item, e);
+                const del = document.createElement('button'); del.className = 'card-action btn-delete'; del.innerHTML = '✕'; del.onclick = (e) => deleteItem(item.id, e);
+                const mv = document.createElement('button'); mv.className = 'card-action btn-move'; mv.innerHTML = '⤳'; mv.onclick = (e) => startMoveItem(item, e);
+                const ren = document.createElement('button'); ren.className = 'card-action btn-rename'; ren.innerHTML = '✎'; ren.title = 'Rename'; ren.onclick = (e) => renameItem(item, e);
+                const dup = document.createElement('button'); dup.className = 'card-action btn-duplicate'; dup.innerHTML = '❑'; dup.title = 'Duplicate'; dup.onclick = (e) => duplicateItem(item, e);
 
                 if (item.type === 'folder') {
-                    square.onclick = () => enterFolder(item);
-                    square.innerHTML = `
-                        <div class="icon folder-icon">📁</div>
-                        <div class="item-name">${item.name}</div>
-                    `;
+                    sq.onclick = () => enterFolder(item);
+                    sq.innerHTML = `<div class="icon folder-icon">📁</div><div class="item-name">${item.name}</div>`;
                 } else if (item.type === 'file') {
-                    square.onclick = () => openEditor(item);
-                    square.innerHTML = `
-                        <div class="icon file-icon">📄</div>
-                        <div class="item-name">${item.name}</div>
-                    `;
+                    sq.onclick = () => openEditor(item);
+                    sq.innerHTML = `<div class="icon file-icon">📄</div><div class="item-name">${item.name}</div>`;
+                } else if (item.type === 'link') {
+                    sq.onclick = () => window.open(item.url, '_blank');
+                    sq.innerHTML = `<div class="icon link-icon">🔗</div><div class="item-name">${item.name}</div>`;
                 }
 
-                wrapper.appendChild(square);
-                wrapper.appendChild(delBtn);
-                wrapper.appendChild(moveBtn);
-                grid.appendChild(wrapper);
+                wrapper.appendChild(sq); wrapper.appendChild(del); wrapper.appendChild(mv); wrapper.appendChild(ren); wrapper.appendChild(dup); grid.appendChild(wrapper);
             });
+        }
+
+        function exportMetadata() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+            const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", "ultimate_notes_backup.json");
+            document.body.appendChild(a); a.click(); a.remove();
+        }
+
+        function deepMergeNoteTrees(targetNode, sourceNode) {
+            if (!sourceNode.children) return;
+            if (!targetNode.children) targetNode.children = [];
+
+            sourceNode.children.forEach(sourceChild => {
+                let matchingTargetChild = targetNode.children.find(
+                    tChild => tChild.name.toLowerCase() === sourceChild.name.toLowerCase() && tChild.type === sourceChild.type
+                );
+
+                if (matchingTargetChild) {
+                    if (sourceChild.type === 'folder') {
+                        deepMergeNoteTrees(matchingTargetChild, sourceChild);
+                    } else if (sourceChild.type === 'file') {
+                        const textContentIdentical = matchingTargetChild.content === sourceChild.content;
+                        const canvasMatrixIdentical = JSON.stringify(matchingTargetChild.canvasMatrix) === JSON.stringify(sourceChild.canvasMatrix);
+                        
+                        if (!textContentIdentical || !canvasMatrixIdentical) {
+                            const uniqueClonedChild = JSON.parse(JSON.stringify(sourceChild));
+                            uniqueClonedChild.id = sourceChild.type + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                            uniqueClonedChild.name = `${sourceChild.name} (Imported Backup)`;
+                            
+                            if (uniqueClonedChild.content.startsWith(`# ${sourceChild.name}`)) {
+                                uniqueClonedChild.content = uniqueClonedChild.content.replace(`# ${sourceChild.name}`, `# ${uniqueClonedChild.name}`);
+                            }
+                            targetNode.children.push(uniqueClonedChild);
+                        }
+                    } else if (sourceChild.type === 'link') {
+                        if (matchingTargetChild.url !== sourceChild.url) {
+                            const clonedLink = JSON.parse(JSON.stringify(sourceChild));
+                            clonedLink.id = 'link_' + Date.now();
+                            clonedLink.name = `${sourceChild.name} (Imported Backup)`;
+                            targetNode.children.push(clonedLink);
+                        }
+                    }
+                } else {
+                    const freshNodeCopy = JSON.parse(JSON.stringify(sourceChild));
+                    targetNode.children.push(freshNodeCopy);
+                }
+            });
+        }
+
+        function importMetadata(input) {
+            const file = input.files[0]; if (!file) return;
+            const r = new FileReader();
+            r.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed && parsed.notebooks) {
+                        deepMergeNoteTrees(appData.notebooks, parsed.notebooks);
+                        if (parsed.autocompleteWeightsLedger) {
+                            for (let token in parsed.autocompleteWeightsLedger) {
+                                autocompleteWeightsLedger[token] = (autocompleteWeightsLedger[token] || 0) + parsed.autocompleteWeightsLedger[token];
+                            }
+                        }
+                        if (parsed.hasOwnProperty('autocompleteEngineActiveStatus')) {
+                            autocompleteEngineActiveStatus = parsed.autocompleteEngineActiveStatus;
+                        }
+                        if (parsed.savedWallpaperSizeOverride) {
+                            document.documentElement.style.setProperty('--user-bg-size', parsed.savedWallpaperSizeOverride);
+                        }
+                        if (!appData.backgroundImage && parsed.backgroundImage) {
+                            appData.backgroundImage = parsed.backgroundImage;
+                            document.body.style.backgroundImage = `url('${parsed.backgroundImage}')`;
+                        }
+                        navigationHistory = [appData.notebooks];
+                        cancelMove(); 
+                        saveData(); 
+                        renderGrid();
+                        alert("Note database reconciliation and merge complete! Duplicate items skipped.");
+                    } else {
+                        alert("Invalid backup structure format.");
+                    }
+                } catch (err) { 
+                    alert("Error processing JSON data."); 
+                }
+            };
+            r.readAsText(file); input.value = '';
         }
 
         renderGrid();
