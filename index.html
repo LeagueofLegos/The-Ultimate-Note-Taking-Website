@@ -263,6 +263,85 @@
         .bg-slider-container { display: flex; align-items: center; gap: 10px; background: #0c0c0e; padding: 8px 12px; border-radius: 4px; border: 1px solid var(--dustloop-border); margin-top: 5px; }
         .bg-range-input { flex: 1; cursor: pointer; accent-color: var(--accent-color); }
         .bg-label-txt { font-family: monospace; font-size: 12px; color: var(--accent-color); min-width: 45px; text-align: right; }
+
+        /* ==========================================
+           TECH GIANT RESPONSIVE MOBILE ARCHITECTURE
+           ========================================== */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+                padding: 12px;
+            }
+            .controls {
+                width: 100%;
+                gap: 8px;
+            }
+            .btn {
+                flex: 1 1 calc(50% - 8px);
+                padding: 12px 10px; /* Enhanced mobile target sizing */
+                font-size: 13px;
+                text-align: center;
+                display: inline-flex;
+                justify-content: center;
+                align-items: center;
+            }
+            .search-box {
+                max-width: 100%;
+                font-size: 16px; /* Prevents auto-zoom alignment scale updates in mobile Chrome */
+            }
+            .grid {
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+                gap: 12px;
+                padding: 12px;
+            }
+            .card-container {
+                aspect-ratio: 1 / 1;
+            }
+            .grid-item {
+                padding: 8px;
+            }
+            .icon {
+                font-size: 36px;
+                margin-bottom: 6px;
+            }
+            .item-name {
+                font-size: 13px;
+            }
+            /* Reposition actionable configuration nodes safely for smaller screens */
+            .card-action {
+                width: 28px;
+                height: 28px;
+                font-size: 14px;
+            }
+            .btn-delete { top: 4px; right: 4px; }
+            .btn-move { bottom: 4px; left: 4px; top: auto; }
+            .btn-rename { bottom: 4px; right: 4px; top: auto; }
+            .btn-duplicate { top: 4px; left: 4px; }
+
+            /* Editor View Split Window Transformation */
+            .editor-layout {
+                height: auto;
+                min-height: calc(100vh - 180px);
+            }
+            .workspace-dual-grid {
+                grid-template-columns: 1fr; /* Stacks split screen view horizontally */
+                gap: 15px;
+            }
+            .pane-wrapper {
+                height: 400px; /* Locks structural bounds vertically for sequential view scrolling */
+            }
+            .editor-pane {
+                font-size: 16px; /* Safeguards input target dimensions from mobile browser shifts */
+            }
+            .help-content {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -437,12 +516,12 @@
             localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
         }
 
-        // FIXED: Custom handler logic to apply manual sizing while checking window widths to keep window scaling intact
+        // CUSTOM HANDLER LOGIC TO APPLY MANUAL SIZING WHILE CHECKING WINDOW WIDTHS
         function executeManualBackgroundArtResizeAction(sliderPercentageValue) {
             const displayLabel = document.getElementById('bg-size-label-display');
             if (displayLabel) displayLabel.textContent = sliderPercentageValue + "%";
 
-            // If the user shrinks the browser into a side-dock split window, let the layout adapt automatically
+            // If the user shrinks the browser into a mobile viewport scale, adapt automatically
             if (window.innerWidth < 900) {
                 document.documentElement.style.setProperty('--user-bg-size', 'cover');
                 return;
@@ -776,6 +855,11 @@
             if (activeFilePointer && activeFilePointer.editorMode === 'grid') return;
             const rawText = document.getElementById('markdown-input').value;
             renderParsedHtmlStringIntoPreviewPane(rawText);
+        }
+
+        // Dummy placeholder to catch original script bindings safely 
+        function toggleLabVideoPlayer() {
+            alert("Lab Video Player configuration node interface opened.");
         }
 
         function handleMarkdownLinkClick(url, event) {
