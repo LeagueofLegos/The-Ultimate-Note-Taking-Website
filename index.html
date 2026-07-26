@@ -454,8 +454,12 @@
 <!-- Inject the Supabase JS Bundle via CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Initialize Supabase Client (FIXED: Removed trailing /rest/v1/ path)
+        const SUPABASE_URL = "https://wivkakmfvfbucllnovct.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_h4WZFQAnbAXZH7Jxno78Jg_LA_8tm-4";
+        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         let rawData = localStorage.getItem('ultimate_notes_data');
-        let appData;
         let activeFilePointer = null; 
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
@@ -471,52 +475,96 @@
         let autocompleteWeightsLedger = {};
         let autocompleteEngineActiveStatus = true;
 
-        try {
-            let parsed = JSON.parse(rawData);
-            if (parsed && parsed.notebooks) {
-                appData = parsed;
-                if (!appData.backgroundImage) appData.backgroundImage = "";
-                if (parsed.autocompleteWeightsLedger) autocompleteWeightsLedger = parsed.autocompleteWeightsLedger;
-                if (parsed.userCustomDictionary) {
-                    parsed.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));
+        // Initialize data structure safely (FIXED: Avoided redeclaring activeFilePointer, etc.)
+        let appData = {
+            notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] }, 
+            backgroundImage: "" 
+        };
+
+        // Setup asynchronous data loading sequence
+        async function initializeApp() {
+            // 1. Try to load from Cloud first
+            const { data, error } = await supabase
+                .from('user_notes')
+                .select('data')
+                .eq('id', 1)
+                .single();
+
+            if (data && data.data) {
+                console.log("Loaded notebook state directly from cloud storage.");
+                appData = data.data;
+            } 
+            // 2. Fallback to LocalStorage if cloud is unavailable or empty
+            else if (rawData) {
+                try {
+                    let parsed = JSON.parse(rawData);
+                    if (parsed && parsed.notebooks) {
+                        appData = parsed;
+                    }
+                } catch(e) {
+                    console.error("Local recovery execution fallback error:", e);
                 }
-                if (parsed.hasOwnProperty('autocompleteEngineActiveStatus')) {
-                    autocompleteEngineActiveStatus = parsed.autocompleteEngineActiveStatus;
-                }
-                
-                // Initialize default database preference values for sizing variables
-                if (parsed.savedWallpaperSizeOverride) {
-                    document.documentElement.style.setProperty('--user-bg-size', parsed.savedWallpaperSizeOverride);
-                }
-            } else {
-                throw new Error("Matrix configuration trace execution fail");
+            } // <-- THIS closing bracket finishes the "else if"
+
+            // Process variables into app context (THIS IS YOUR CORRECT BLOCK)
+            if (appData.autocompleteWeightsLedger) autocompleteWeightsLedger = appData.autocompleteWeightsLedger;
+            if (appData.userCustomDictionary) {
+                appData.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));
             }
-        } catch(e) {
-            appData = {
-                notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] },
-                backgroundImage: ""
-            };
-            saveData();
+            if (appData.hasOwnProperty('autocompleteEngineActiveStatus')) {
+                autocompleteEngineActiveStatus = appData.autocompleteEngineActiveStatus;
+            }
+            if (appData.savedWallpaperSizeOverride) {
+                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);
+            }
+            if (appData.backgroundImage) {
+                document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
+            }
+
+            // Trigger initial rendering mechanics
+            navigationHistory = [appData.notebooks];
+            renderGrid();
         }
 
-        if (appData.backgroundImage) {
-            document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
-        }
-
-        let navigationHistory = [appData.notebooks];
+        // Replace the original bottom-level script render call with our async loader
+        initializeApp();
+        
+        // Global tracking variable for the cloud debounce process
+        let cloudSyncTimer;
 
         function saveData() {
-            appData.autocompleteWeightsLedger = autocompleteWeightsLedger;
-            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);
-            appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus;
+            appData.autocompleteWeightsLedger = autocompleteWeightsLedger; 
+            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens); 
+            appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus; 
             
-            // Sync custom scaling metrics cleanly to persistent storage
-            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size');
-            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference;
+            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size'); 
+            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference; 
             
-            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
+            // 1. Maintain Instant Local Cache (No UI Lag)
+            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData)); 
+
+            // 2. Trigger Debounced Cloud Auto-Sync
+            clearTimeout(cloudSyncTimer);
+            cloudSyncTimer = setTimeout(() => {
+                syncToCloud();
+            }, 2500); // Waits for 2.5 seconds of typing silence before syncing
         }
 
+        // Function to handle the actual Supabase database insertion
+        async function syncToCloud() {
+            console.log("Auto-syncing to cloud database...");
+            
+            // We target row ID 1 to continually overwrite and update your single master state
+            const { data, error } = await supabase
+                .from('user_notes')
+                .upsert({ id: 1, data: appData });
+
+            if (error) {
+                console.error("Cloud sync failed:", error.message);
+            } else {
+                console.log("Cloud sync complete.");
+            }
+        }
         // CUSTOM HANDLER LOGIC TO APPLY MANUAL SIZING WHILE CHECKING WINDOW WIDTHS
         function executeManualBackgroundArtResizeAction(sliderPercentageValue) {
             const displayLabel = document.getElementById('bg-size-label-display');
