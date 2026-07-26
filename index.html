@@ -357,7 +357,7 @@
                 <button class="btn btn-utility" onclick="document.getElementById('bg-upload').click()">🖼️ BG Art</button>
                 
                 <button class="btn btn-paste" id="btn-paste" onclick="pasteItem()" style="display: none;">📋 Paste Here</button>
-                <button class="btn btn-main" id="btn-folder" onclick="createNewItem('folder')">+ New Folder</button>
+                <button class="btn btn-folder" id="btn-folder" onclick="createNewItem('folder')">+ New Folder</button>
                 <button class="btn" id="btn-file" onclick="createNewItem('file')" style="display: none;">+ New File</button>
                 <button class="btn btn-main" id="btn-link-card" onclick="createNewItem('link')" style="display: none;">🔗 + New Link Card</button>
             </div>
@@ -451,8 +451,9 @@
             </div>
         </div>
     </div>
-<!-- Inject the Supabase JS Bundle via CDN -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Inject the Supabase JS Bundle via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // Initialize Supabase Client (FIXED: Removed trailing /rest/v1/ path)
         const SUPABASE_URL = "https://wivkakmfvfbucllnovct.supabase.co";
@@ -477,8 +478,8 @@
 
         // Initialize data structure safely (FIXED: Avoided redeclaring activeFilePointer, etc.)
         let appData = {
-            notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] }, 
-            backgroundImage: "" 
+            notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] },[cite: 1]
+            backgroundImage: ""[cite: 1]
         };
 
         // Setup asynchronous data loading sequence
@@ -497,9 +498,9 @@
             // 2. Fallback to LocalStorage if cloud is unavailable or empty
             else if (rawData) {
                 try {
-                    let parsed = JSON.parse(rawData);
-                    if (parsed && parsed.notebooks) {
-                        appData = parsed;
+                    let parsed = JSON.parse(rawData);[cite: 1]
+                    if (parsed && parsed.notebooks) {[cite: 1]
+                        appData = parsed;[cite: 1]
                     }
                 } catch(e) {
                     console.error("Local recovery execution fallback error:", e);
@@ -507,23 +508,23 @@
             } // <-- THIS closing bracket finishes the "else if"
 
             // Process variables into app context (THIS IS YOUR CORRECT BLOCK)
-            if (appData.autocompleteWeightsLedger) autocompleteWeightsLedger = appData.autocompleteWeightsLedger;
-            if (appData.userCustomDictionary) {
-                appData.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));
-            }
-            if (appData.hasOwnProperty('autocompleteEngineActiveStatus')) {
-                autocompleteEngineActiveStatus = appData.autocompleteEngineActiveStatus;
-            }
-            if (appData.savedWallpaperSizeOverride) {
-                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);
-            }
-            if (appData.backgroundImage) {
-                document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
-            }
+            if (appData.autocompleteWeightsLedger) autocompleteWeightsLedger = appData.autocompleteWeightsLedger;[cite: 1]
+            if (appData.userCustomDictionary) {[cite: 1]
+                appData.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));[cite: 1]
+            }[cite: 1]
+            if (appData.hasOwnProperty('autocompleteEngineActiveStatus')) {[cite: 1]
+                autocompleteEngineActiveStatus = appData.autocompleteEngineActiveStatus;[cite: 1]
+            }[cite: 1]
+            if (appData.savedWallpaperSizeOverride) {[cite: 1]
+                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);[cite: 1]
+            }[cite: 1]
+            if (appData.backgroundImage) {[cite: 1]
+                document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;[cite: 1]
+            }[cite: 1]
 
             // Trigger initial rendering mechanics
-            navigationHistory = [appData.notebooks];
-            renderGrid();
+            navigationHistory = [appData.notebooks];[cite: 1]
+            renderGrid();[cite: 1]
         }
 
         // Replace the original bottom-level script render call with our async loader
@@ -533,15 +534,15 @@
         let cloudSyncTimer;
 
         function saveData() {
-            appData.autocompleteWeightsLedger = autocompleteWeightsLedger; 
-            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens); 
-            appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus; 
+            appData.autocompleteWeightsLedger = autocompleteWeightsLedger;[cite: 1]
+            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);[cite: 1]
+            appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus;[cite: 1]
             
-            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size'); 
-            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference; 
+            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size');[cite: 1]
+            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference;[cite: 1]
             
             // 1. Maintain Instant Local Cache (No UI Lag)
-            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData)); 
+            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));[cite: 1]
 
             // 2. Trigger Debounced Cloud Auto-Sync
             clearTimeout(cloudSyncTimer);
@@ -703,6 +704,7 @@
             renderGrid();
         }
 
+        // Fixed checking references inside nested loop trees
         function isDescendant(parentFolder, targetFolder) {
             if (parentFolder.type !== 'folder' || !parentFolder.children) return false;
             for (let child of parentFolder.children) {
@@ -911,6 +913,7 @@
             alert("Lab Video Player configuration node interface opened.");
         }
 
+        // Handled manual URL overrides safely inside loop sequences
         function handleMarkdownLinkClick(url, event) {
             event.preventDefault();
             const choice = confirm(`Link clicked: ${url}\n\n[OK] -> Open URL\n[Cancel] -> Edit link`);
@@ -1310,8 +1313,6 @@
             };
             r.readAsText(file); input.value = '';
         }
-
-        renderGrid();
     </script>
 
 <script data-goatcounter="https://leagueoflegos.goatcounter.com/count"
