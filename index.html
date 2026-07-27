@@ -459,7 +459,6 @@
         let rawData = localStorage.getItem('ultimate_notes_data');
         let activeFilePointer = null; 
         let movingItemPointer = null; 
-        let movingItemParentArrayRef = null; 
         let currentUserSession = null;
         let isAppInitialized = false; // Prevents race-condition dual execution loops
 
@@ -690,6 +689,745 @@
             const redoBtn = document.getElementById('history-redo-btn');
             if (undoBtn) undoBtn.disabled = (globalUndoHistoryStack.length === 0);
             if (redoBtn) redoBtn.disabled = (globalRedoHistoryStack.length === 0);
+        }
+
+        // --- CORE FFL OPERATIONAL FUNCTIONS ---
+        function generateUniqueId() {
+            return 'node-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now();
+        }
+
+        function createNewItem(type) {
+            const name = prompt(`Enter ${type} title configuration layout string name:`);
+            if (!name || name.trim() === "") return;
+
+            pushGlobalStateSnapshot();
+            const currentFolder = getCurrentFolder();
+            if (!currentFolder.children) currentFolder.children = [];
+
+            let newItem = {
+                id: generateUniqueId(),
+                name: name.trim(),
+                type: type,
+                created_at: Date.now(),
+                updated_at: Date.now()
+            };
+
+            if (type === 'file') {
+                newItem.content = "";
+                newItem.editorMode = 'text';
+                newItem.canvasMatrix = {};
+                newItem.gridRowsCount = 4;
+                newItem.gridColsCount = 4;
+            } else if (type === 'folder') {
+                newItem.children = [];
+            } else if (type === 'link') {
+                let url = prompt("Enter target hypermedia HTTP destination hyperlink URL link address:");
+                if (!url) return;
+                if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+                newItem.url = url;
+            }
+
+            currentFolder.children.push(newItem);
+            saveData();
+            renderGrid();
+        }
+
+        function deleteItem(id, event) {
+            if (event) event.stopPropagation();
+            if (!confirm("Confirm data element purging deletion task?")) return;
+
+            pushGlobalStateSnapshot();
+            const currentFolder = getCurrentFolder();
+            currentFolder.children = currentFolder.children.filter(item => item.id !== id);
+            
+            if (movingItemPointer && movingItemPointer.id === id) {
+                movingItemPointer = null;
+            }
+
+            saveData();
+            renderGrid();
+        }
+
+        function renameItem(item, event) {
+            if (event) event.stopPropagation();
+            const newName = prompt("Modify current entity title value profile config field name reference:", item.name);
+            if (!newName || newName.trim() === "" || newName === item.name) return;
+
+            pushGlobalStateSnapshot();
+            item.name = newName.trim();
+            item.updated_at = Date.now();
+
+            saveData();
+            renderGrid();
+        }
+
+        function cloneNodeTreeStructure(item, prefix) {
+            let copy = JSON.parse(JSON.stringify(item));
+            
+            function reassignNodeIdentifiers(node) {
+                node.id = generateUniqueId();
+                node.created_at = Date.now();
+                node.updated_at = Date.now();
+                if (node.children) {
+                    node.children.forEach(child => reassignNodeIdentifiers(child));
+                }
+            }
+            
+            reassignNodeIdentifiers(copy);
+            copy.name = prefix + copy.name;
+            return copy;
+        }
+
+        function duplicateItem(item, event) {
+            if (event) event.stopPropagation();
+            pushGlobalStateSnapshot();
+
+            const currentFolder = getCurrentFolder();
+            const duplicatedInstance = cloneNodeTreeStructure(item, "Copy of ");
+            
+            currentFolder.children.push(duplicatedInstance);
+            saveData();
+            renderGrid();
+        }
+
+        function startMoveItem(item, event) {
+            if (event) event.stopPropagation();
+            movingItemPointer = item;
+            renderGrid();
+        }
+
+        function removeNodeFromTreeById(rootItem, targetId) {
+            if (!rootItem || !rootItem.children) return false;
+            let index = rootItem.children.findIndex(c => c.id === targetId);
+            if (index !== -1) {
+                rootItem.children.splice(index, 1);
+                return true;
+            }
+            for (let child of rootItem.children) {
+                if (child.type === 'folder' && removeNodeFromTreeById(child, targetId)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function pasteItem() {
+            if (!movingItemPointer) return;
+            
+            const destinationFolder = getCurrentFolder();
+            
+            if (destinationFolder.id === movingItemPointer.id || isDestinationDescendantOfSource(movingItemPointer, destinationFolder.id)) {
+                alert("Invalid migration logic loop: Node context nesting constraint collision.");
+                movingItemPointer = null;
+                renderGrid();
+                return;
+            }
+
+            pushGlobalStateSnapshot();
+            removeNodeFromTreeById(appData.notebooks, movingItemPointer.id);
+
+            if (!destinationFolder.children) destinationFolder.children = [];
+            destinationFolder.children.push(movingItemPointer);
+            
+            movingItemPointer = null;
+            saveData();
+            renderGrid();
+        }
+
+        function isDestinationDescendantOfSource(sourceNode, targetId) {
+            if (sourceNode.id === targetId) return true;
+            if (sourceNode.children) {
+                for (let child of sourceNode.children) {
+                    if (isDestinationDescendantOfSource(child, targetId)) return true;
+                }
+            }
+            return false;
+        }
+
+        // --- EDITOR SYSTEMS CONTROLS ---
+        function openEditor(item) {
+            activeFilePointer = item;
+            document.getElementById('browser-view').classList.add('hidden');
+            document.getElementById('editor-view').classList.remove('hidden');
+            document.getElementById('editor-file-title').textContent = `Editing File: ${item.name}`;
+
+            const markdownInput = document.getElementById('markdown-input');
+            markdownInput.value = item.content || "";
+
+            if (!item.editorMode) item.editorMode = 'text';
+            if (!item.canvasMatrix) item.canvasMatrix = {};
+            if (!item.gridRowsCount) item.gridRowsCount = 4;
+            if (!item.gridColsCount) item.gridColsCount = 4;
+
+            syncEditorInterfaceLayoutElementsState();
+            dynamicallyLearnedTokens.clear();
+            parseContextVocabulariesFromActiveFile(markdownInput.value);
+            renderParsedHtmlStringIntoPreviewPane(markdownInput.value);
+        }
+
+        function closeEditor() {
+            if (!activeFilePointer) return;
+            
+            if (activeFilePointer.editorMode === 'text') {
+                activeFilePointer.content = document.getElementById('markdown-input').value;
+            } else {
+                activeFilePointer.content = generateMarkdownTableStringFromInfiniteGridCanvas();
+            }
+            
+            activeFilePointer.updated_at = Date.now();
+            activeFilePointer = null;
+            
+            document.getElementById('editor-view').classList.add('hidden');
+            document.getElementById('browser-view').classList.remove('hidden');
+            
+            saveData();
+            renderGrid();
+        }
+
+        function switchLeftPaneEditorMode() {
+            if (!activeFilePointer) return;
+            
+            if (activeFilePointer.editorMode === 'text') {
+                const verifiedMigrationFlag = confirm("Synchronize transform active editor workspace to multi-cell grid architecture matrix layout view?");
+                if (!verifiedMigrationFlag) return;
+                
+                activeFilePointer.editorMode = 'grid';
+                parseMarkdownTableStringIntoInfiniteGridCanvas(document.getElementById('markdown-input').value);
+            } else {
+                activeFilePointer.content = generateMarkdownTableStringFromInfiniteGridCanvas();
+                activeFilePointer.editorMode = 'text';
+                document.getElementById('markdown-input').value = activeFilePointer.content;
+            }
+            
+            syncEditorInterfaceLayoutElementsState();
+        }
+
+        function syncEditorInterfaceLayoutElementsState() {
+            const txtWrapper = document.getElementById('left-pane-text-wrapper');
+            const gridWrapper = document.getElementById('left-pane-grid-wrapper');
+            const modeToggleBtn = document.getElementById('toggle-editor-mode-btn');
+
+            if (activeFilePointer.editorMode === 'grid') {
+                txtWrapper.classList.add('hidden');
+                gridWrapper.classList.remove('hidden');
+                modeToggleBtn.textContent = "📝 Toggle Editor to Raw Text Engine";
+                renderInfiniteCanvasMatrixInputsElementsGrid();
+            } else {
+                gridWrapper.classList.add('hidden');
+                txtWrapper.classList.remove('hidden');
+                modeToggleBtn.textContent = "📊 Toggle Editor to Sheets Grid";
+            }
+        }
+
+        // --- INFINITE SHEETS INTERACTION MATRIX ENGINE ---
+        function renderInfiniteCanvasMatrixInputsElementsGrid() {
+            const body = document.getElementById('infinite-canvas-matrix-body');
+            body.innerHTML = "";
+            
+            let totalRows = activeFilePointer.gridRowsCount;
+            let totalCols = activeFilePointer.gridColsCount;
+            
+            for (let r = 0; r < totalRows; r++) {
+                const tr = document.createElement('tr');
+                for (let c = 0; c < totalCols; c++) {
+                    const td = document.createElement('td');
+                    const cellKeyIdStr = `r${r}c${c}`;
+                    const textarea = document.createElement('textarea');
+                    textarea.className = 'cell-textarea-input';
+                    textarea.value = activeFilePointer.canvasMatrix[cellKeyIdStr] || "";
+                    
+                    textarea.oninput = (e) => {
+                        activeFilePointer.canvasMatrix[cellKeyIdStr] = e.target.value;
+                        const compositeMarkdown = generateMarkdownTableStringFromInfiniteGridCanvas();
+                        updateLivePreviewFromActiveFocusCell(compositeMarkdown);
+                    };
+                    
+                    td.appendChild(textarea);
+                    tr.appendChild(td);
+                }
+                body.appendChild(tr);
+            }
+            
+            const structuralOutputData = generateMarkdownTableStringFromInfiniteGridCanvas();
+            renderParsedHtmlStringIntoPreviewPane(structuralOutputData);
+        }
+
+        function expandInfiniteCanvasDimension(dimensionType) {
+            if (!activeFilePointer) return;
+            if (dimensionType === 'row') activeFilePointer.gridRowsCount++;
+            if (dimensionType === 'col') activeFilePointer.gridColsCount++;
+            renderInfiniteCanvasMatrixInputsElementsGrid();
+        }
+
+        function shrinkInfiniteCanvasDimension(dimensionType) {
+            if (!activeFilePointer) return;
+            if (dimensionType === 'row' && activeFilePointer.gridRowsCount > 1) activeFilePointer.gridRowsCount--;
+            if (dimensionType === 'col' && activeFilePointer.gridColsCount > 1) activeFilePointer.gridColsCount--;
+            renderInfiniteCanvasMatrixInputsElementsGrid();
+        }
+
+        function generateMarkdownTableStringFromInfiniteGridCanvas() {
+            let rMax = activeFilePointer.gridRowsCount;
+            let cMax = activeFilePointer.gridColsCount;
+            let rowsOut = [];
+
+            for (let r = 0; r < rMax; r++) {
+                let cellDataArr = [];
+                for (let c = 0; c < cMax; c++) {
+                    let text = activeFilePointer.canvasMatrix[`r${r}c${c}`] || "";
+                    cellDataArr.push(text.replace(/\|/g, '\\|'));
+                }
+                rowsOut.push("| " + cellDataArr.join(" | ") + " |");
+                
+                if (r === 0) {
+                    let separators = Array(cMax).fill("---");
+                    rowsOut.push("| " + separators.join(" | ") + " |");
+                }
+            }
+            return rowsOut.join("\n");
+        }
+
+        function parseMarkdownTableStringIntoInfiniteGridCanvas(markdownText) {
+            activeFilePointer.canvasMatrix = {};
+            if (!markdownText || markdownText.trim() === "") {
+                activeFilePointer.gridRowsCount = 4;
+                activeFilePointer.gridColsCount = 4;
+                return;
+            }
+
+            let sourceLines = markdownText.split('\n').filter(line => line.trim().startsWith('|'));
+            if (sourceLines.length === 0) {
+                activeFilePointer.gridRowsCount = 4;
+                activeFilePointer.gridColsCount = 4;
+                activeFilePointer.canvasMatrix["r0c0"] = markdownText;
+                return;
+            }
+
+            if (sourceLines.length > 1 && sourceLines[1].includes('---')) {
+                sourceLines.splice(1, 1);
+            }
+
+            activeFilePointer.gridRowsCount = sourceLines.length;
+            let targetMaxCols = 1;
+
+            sourceLines.forEach((line, rowIndex) => {
+                let segmentTokens = line.split('|').map(s => s.trim());
+                if (line.startsWith('|')) segmentTokens.shift();
+                if (line.endsWith('|')) segmentTokens.pop();
+
+                if (segmentTokens.length > targetMaxCols) targetMaxCols = segmentTokens.length;
+
+                segmentTokens.forEach((cellVal, colIndex) => {
+                    activeFilePointer.canvasMatrix[`r${rowIndex}c${colIndex}`] = cellVal.replace(/\\\|/g, '|');
+                });
+            });
+
+            activeFilePointer.gridColsCount = targetMaxCols;
+        }
+
+        // --- STYLES PREFERENCES MANAGEMENT ---
+        function executeManualBackgroundArtResizeAction(scaleFactorValue) {
+            const formattedPercentageString = scaleFactorValue + "%";
+            document.getElementById('bg-size-label-display').textContent = formattedPercentageString;
+            document.documentElement.style.setProperty('--user-bg-size', formattedPercentageString);
+            saveData();
+        }
+
+        function resetBackgroundScalingPreference() {
+            document.getElementById('bg-size-scaler-track').value = 100;
+            document.getElementById('bg-size-label-display').textContent = "100%";
+            document.documentElement.style.removeProperty('--user-bg-size');
+            if (appData.savedWallpaperSizeOverride) {
+                delete appData.savedWallpaperSizeOverride;
+            }
+            saveData();
+        }
+
+        function uploadBackground(inputElement) {
+            const file = inputElement.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const dataUrlResult = event.target.result;
+                pushGlobalStateSnapshot();
+                appData.backgroundImage = dataUrlResult;
+                document.body.style.backgroundImage = `url('${dataUrlResult}')`;
+                saveData();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- GLOBAL STRUCTURAL DATABASE SEARCH ENGINE ---
+        function traverseAndAccumulateSearchResults(nodeItem, searchQueryToken, structuralPathString, accumulatedResultsList) {
+            if (!nodeItem) return;
+            
+            let currentComputedPath = structuralPathString ? `${structuralPathString} / ${nodeItem.name}` : nodeItem.name;
+            
+            if (nodeItem.id !== 'root' && nodeItem.name.toLowerCase().includes(searchQueryToken)) {
+                accumulatedResultsList.push({ item: nodeItem, path: currentComputedPath });
+            }
+
+            if (nodeItem.type === 'file' && nodeItem.content && nodeItem.content.toLowerCase().includes(searchQueryToken)) {
+                let matchesAlready = accumulatedResultsList.some(r => r.item.id === nodeItem.id);
+                if (!matchesAlready) {
+                    accumulatedResultsList.push({ item: nodeItem, path: currentComputedPath + " (Content Match)" });
+                }
+            }
+
+            if (nodeItem.children) {
+                nodeItem.children.forEach(childNode => {
+                    traverseAndAccumulateSearchResults(childNode, searchQueryToken, currentComputedPath, accumulatedResultsList);
+                });
+            }
+        }
+
+        function handleGlobalSearch() {
+            const searchInput = document.getElementById('searchBar');
+            const resultsPane = document.getElementById('search-results');
+            const resultsList = document.getElementById('search-results-list');
+            
+            const token = searchInput.value.trim().toLowerCase();
+            if (!token) {
+                resultsPane.classList.add('hidden');
+                resultsList.innerHTML = "";
+                return;
+            }
+
+            let accumulatedResults = [];
+            traverseAndAccumulateSearchResults(appData.notebooks, token, "", accumulatedResults);
+
+            resultsList.innerHTML = "";
+            if (accumulatedResults.length > 0) {
+                resultsPane.classList.remove('hidden');
+                accumulatedResults.forEach(res => {
+                    const btn = document.createElement('button');
+                    btn.className = 'search-result-item';
+                    
+                    let prefixIcon = "📁";
+                    if (res.item.type === 'file') prefixIcon = "📄";
+                    if (res.item.type === 'link') prefixIcon = "🔗";
+
+                    btn.innerHTML = `
+                        <div><strong>${prefixIcon} ${res.item.name}</strong></div>
+                        <div class="search-path">${res.path}</div>
+                    `;
+                    
+                    btn.onclick = () => {
+                        resultsPane.classList.add('hidden');
+                        searchInput.value = "";
+                        
+                        let pathTrackingSequence = [];
+                        buildNavigationLineageTrailPath(appData.notebooks, res.item.id, pathTrackingSequence);
+                        
+                        if (pathTrackingSequence.length > 0) {
+                            navigationHistory = pathTrackingSequence;
+                            if (res.item.type === 'file') {
+                                openEditor(res.item);
+                            } else if (res.item.type === 'link' && res.item.url) {
+                                window.open(res.item.url, '_blank');
+                                renderGrid();
+                            } else {
+                                renderGrid();
+                            }
+                        }
+                    };
+                    resultsList.appendChild(btn);
+                });
+            } else {
+                resultsPane.classList.remove('hidden');
+                resultsList.innerHTML = `<div style="color:var(--text-dim); padding:8px; font-size:13px;">No matching notebook schema entities found.</div>`;
+            }
+        }
+
+        function buildNavigationLineageTrailPath(currentNode, targetNodeId, historicalSequenceCollector) {
+            if (!currentNode) return false;
+            
+            historicalSequenceCollector.push(currentNode);
+            if (currentNode.id === targetNodeId) return true;
+            
+            if (currentNode.children) {
+                for (let child of currentNode.children) {
+                    if (child.type === 'folder' || child.id === targetNodeId) {
+                        if (buildNavigationLineageTrailPath(child, targetNodeId, historicalSequenceCollector)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            
+            historicalSequenceCollector.pop();
+            return false;
+        }
+
+        // --- METADATA DATA IMPORT EXPORT CHANNELS ---
+        function exportMetadata() {
+            const dataString = JSON.stringify(appData, null, 2);
+            const blobContainer = new Blob([dataString], { type: "application/json" });
+            const anchorElement = document.createElement('a');
+            anchorElement.download = `ultimate_notebook_backup_${Date.now()}.json`;
+            anchorElement.href = URL.createObjectURL(blobContainer);
+            anchorElement.click();
+            URL.revokeObjectURL(anchorElement.href);
+        }
+
+        function importMetadata(inputElement) {
+            const file = inputElement.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let parsedData = JSON.parse(e.target.result);
+                    if (parsedData && parsedData.notebooks) {
+                        pushGlobalStateSnapshot();
+                        
+                        if (confirm("Perform absolute total structural overwrite replacing all folders with imported file contents?")) {
+                            appData = parsedData;
+                        } else if (confirm("Perform incremental relational branch update merging contents instead?")) {
+                            deepMergeNoteTrees(appData.notebooks, parsedData.notebooks);
+                        } else {
+                            return;
+                        }
+                        
+                        saveData();
+                        navigationHistory = [appData.notebooks];
+                        
+                        if (appData.backgroundImage) {
+                            document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
+                        }
+                        renderGrid();
+                    } else {
+                        alert("Invalid metadata scheme structure missing required notebooks root layout nodes.");
+                    }
+                } catch(err) {
+                    alert("Fatal evaluation matrix error mapping data file stream contents: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- EDITOR TEXT AREA HOOK INTERFACES ---
+        function handleEditorInput(event) {
+            const val = event.target.value;
+            if (activeFilePointer) {
+                activeFilePointer.content = val;
+            }
+            renderParsedHtmlStringIntoPreviewPane(val);
+            evaluateAutocompletePopupVisibilityEngine(event.target);
+        }
+
+        function handleEditorKeydowns(event) {
+            const autocompleteBox = document.getElementById('autocomplete-box');
+            if (autocompleteBox && autocompleteBox.style.display === 'block') {
+                const elements = autocompleteBox.querySelectorAll('.suggestion-item');
+                
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    elements[activeSuggestionIndex]?.classList.remove('active');
+                    activeSuggestionIndex = (activeSuggestionIndex + 1) % elements.length;
+                    elements[activeSuggestionIndex]?.classList.add('active');
+                    elements[activeSuggestionIndex]?.scrollIntoView({ block: 'nearest' });
+                    return;
+                }
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    elements[activeSuggestionIndex]?.classList.remove('active');
+                    activeSuggestionIndex = (activeSuggestionIndex - 1 + elements.length) % elements.length;
+                    elements[activeSuggestionIndex]?.classList.add('active');
+                    elements[activeSuggestionIndex]?.scrollIntoView({ block: 'nearest' });
+                    return;
+                }
+                if (event.key === 'Enter' || event.key === 'Tab') {
+                    event.preventDefault();
+                    if (elements[activeSuggestionIndex]) {
+                        elements[activeSuggestionIndex].click();
+                    }
+                    return;
+                }
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    autocompleteBox.style.display = 'none';
+                    return;
+                }
+            } else {
+                if (event.key === 'Tab') {
+                    event.preventDefault();
+                    toggleMasterAutocompleteState();
+                }
+            }
+        }
+
+        // --- AUTOCOMPLETE ENGINE ALGORITHMS ---
+        function toggleMasterAutocompleteState() {
+            autocompleteEngineActiveStatus = !autocompleteEngineActiveStatus;
+            updateAutocompleteToggleButtonView();
+            saveData();
+        }
+
+        function registerCustomVocabularyWordViaPanel() {
+            const input = document.getElementById('custom-vocab-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            text.split(',').map(s => s.trim()).forEach(token => {
+                if (token.length >= 1) {
+                    dynamicallyLearnedTokens.add(token);
+                }
+            });
+
+            input.value = "";
+            saveData();
+            alert("Custom syntax vocabulary elements appended successfully.");
+        }
+
+        function evaluateAutocompletePopupVisibilityEngine(textarea) {
+            const box = document.getElementById('autocomplete-box');
+            if (!autocompleteEngineActiveStatus) {
+                box.style.display = 'none';
+                return;
+            }
+
+            const cursor = textarea.selectionStart;
+            const text = textarea.value;
+            const boundaries = text.slice(0, cursor).match(/[\s\n]*([^\s\n]*)$/);
+            
+            if (!boundaries || !boundaries[1]) {
+                box.style.display = 'none';
+                return;
+            }
+
+            const tokenSubStr = boundaries[1];
+            globalTokenStartOffset = cursor - tokenSubStr.length;
+            globalTokenEndOffset = cursor;
+
+            const pooledTokenList = Array.from(new Set([...baseFgcWords, ...dynamicallyLearnedTokens]));
+            currentSuggestionsMapping = pooledTokenList.filter(word => {
+                return word.toLowerCase().startsWith(tokenSubStr.toLowerCase()) && word.toLowerCase() !== tokenSubStr.toLowerCase();
+            });
+
+            currentSuggestionsMapping.sort((a, b) => {
+                let wA = autocompleteWeightsLedger[a] || 0;
+                let wB = autocompleteWeightsLedger[b] || 0;
+                return wB - wA;
+            });
+
+            if (currentSuggestionsMapping.length === 0) {
+                box.style.display = 'none';
+                return;
+            }
+
+            box.innerHTML = "";
+            activeSuggestionIndex = 0;
+
+            currentSuggestionsMapping.forEach((word, idx) => {
+                const item = document.createElement('div');
+                item.className = `suggestion-item ${idx === 0 ? 'active' : ''}`;
+                item.textContent = word;
+                
+                item.onclick = () => {
+                    const trackingBefore = text.slice(0, globalTokenStartOffset);
+                    const trackingAfter = text.slice(globalTokenEndOffset);
+                    
+                    textarea.value = trackingBefore + word + " " + trackingAfter;
+                    textarea.focus();
+                    
+                    let targetIndexPos = globalTokenStartOffset + word.length + 1;
+                    textarea.setSelectionRange(targetIndexPos, targetIndexPos);
+
+                    autocompleteWeightsLedger[word] = (autocompleteWeightsLedger[word] || 0) + 1;
+                    box.style.display = 'none';
+                    
+                    if (activeFilePointer) activeFilePointer.content = textarea.value;
+                    renderParsedHtmlStringIntoPreviewPane(textarea.value);
+                };
+
+                box.appendChild(item);
+            });
+
+            const coordinates = determineCursorPageCoordinatesOffsets(textarea);
+            box.style.top = `${coordinates.top + 24}px`;
+            box.style.left = `${coordinates.left}px`;
+            box.style.display = 'block';
+        }
+
+        function determineCursorPageCoordinatesOffsets(textarea) {
+            const rect = textarea.getBoundingClientRect();
+            return {
+                top: rect.top + window.scrollY,
+                left: rect.left + window.scrollX
+            };
+        }
+
+        // --- EXTRA UI PRESENTATION BINDINGS ---
+        function toggleHelp() {
+            const panel = document.getElementById('help-options');
+            const icon = document.getElementById('help-toggle-icon');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                icon.textContent = "▲";
+            } else {
+                panel.classList.add('hidden');
+                icon.textContent = "▼";
+            }
+        }
+        
+        document.getElementById('help-options').classList.add('hidden');
+        document.getElementById('help-toggle-icon').textContent = "▼";
+
+        function toggleLabVideoPlayer() {
+            let player = document.getElementById('floating-lab-media-node');
+            if (player) {
+                player.classList.toggle('hidden');
+            } else {
+                let frame = document.createElement('div');
+                frame.id = 'floating-lab-media-node';
+                frame.style.position = 'fixed';
+                frame.style.bottom = '20px';
+                frame.style.right = '20px';
+                frame.style.zIndex = '9999';
+                frame.style.background = 'var(--panel-color)';
+                frame.style.border = '2px solid var(--accent-color)';
+                frame.style.padding = '8px';
+                frame.style.borderRadius = '6px';
+                frame.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:11px;">
+                        <span style="color:var(--accent-color); font-weight:bold;">LAB PLAYER</span>
+                        <button onclick="document.getElementById('floating-lab-media-node').classList.add('hidden')" style="background:none; border:none; color:#ff4655; cursor:pointer;">✖</button>
+                    </div>
+                    <input type="text" id="lab-video-url-input" placeholder="Paste clip file URL link address..." style="background:#000; border:1px solid #444; color:#fff; padding:4px; font-size:12px; width:260px; outline:none; margin-bottom:6px; display:block;">
+                    <button class="btn btn-main" style="padding:4px 8px; font-size:11px; width:100%;" onclick="loadVideoAssetUrlIntoPlayer()">Load Stream Media</button>
+                    <div id="video-container-frame" style="margin-top:6px; width:260px; height:150px; background:#000; display:flex; align-items:center; justify-content:center; color:var(--text-dim); font-size:11px;">Media Frame Idle</div>
+                `;
+                document.body.appendChild(frame);
+            }
+        }
+
+        function loadVideoAssetUrlIntoPlayer() {
+            let input = document.getElementById('lab-video-url-input');
+            let container = document.getElementById('video-container-frame');
+            let url = input.value.trim();
+            if (!url) return;
+
+            if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                let id = "";
+                if (url.includes('v=')) id = url.split('v=')[1].split('&')[0];
+                else id = url.split('/').pop();
+                container.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>`;
+            } else {
+                container.innerHTML = `<video src="${url}" controls width="100%" height="100%"></video>`;
+            }
+        }
+
+        function executeQuickClipboardCopyAction(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Combo sequence mapped directly into systemic system clipboard memory workspace context layer.");
+            });
+        }
+
+        function handleMarkdownLinkClick(url, event) {
+            if (event) event.preventDefault();
+            window.open(url, '_blank');
         }
 
         async function initializeApp() {
