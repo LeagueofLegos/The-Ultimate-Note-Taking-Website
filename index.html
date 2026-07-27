@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#121216">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Ultimate%20Notes%22,%22short_name%22:%22Notes%22,%22theme_color%22:%22%23121216%22,%22background_color%22:%22%23121216%22,%22display%22:%22standalone%22,%22orientation%22:%22any%22,%22start_url%22:%22.%22,%22icons%22:[{%22src%22:%22https://leagueoflegos.github.io/favicon.ico%22,%22sizes%22:%2264x64%22,%22type%22:%22image/x-icon%22}]}加工">
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Ultimate%20Notes%22,%22short_name%22:%22Notes%22,%22theme_color%22:%22%23121216%22,%22background_color%22:%22%23121216%22,%22display%22:%22standalone%22,%22orientation%22:%22any%22,%22start_url%22:%22.%22,%22icons%22:[{%22src%22:%22https://leagueoflegos.github.io/favicon.ico%22,%22sizes%22:%2264x64%22,%22type%22:%22image/x-icon%22}]}">
 
     <style>
         :root {
@@ -448,6 +448,7 @@
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
         let currentUserSession = null;
+        let isAppInitialized = false; // Prevents race-condition dual execution loops
 
         // Workspace Undo/Redo Global Linear Stack Buffers
         let globalUndoHistoryStack = [];
@@ -522,10 +523,11 @@
             }
         }
 
+        // Unified Session Presence Verification Core
         sb.auth.onAuthStateChange((event, session) => {
             currentUserSession = session ? session.user : null;
             updateAuthPanelUI(currentUserSession);
-            if (event === 'SIGNED_IN') {
+            if (event === 'SIGNED_IN' && !isAppInitialized) {
                 initializeApp();
             }
         });
@@ -534,7 +536,6 @@
         function pushGlobalStateSnapshot() {
             if (globalHistoryLockActive) return;
             
-            // Deep clone full configuration object block states
             const snapshotContainer = JSON.stringify({
                 appData: appData,
                 autocompleteWeightsLedger: autocompleteWeightsLedger,
@@ -542,7 +543,7 @@
             });
             
             globalUndoHistoryStack.push(snapshotContainer);
-            globalRedoHistoryStack = []; // Clear redos on fresh interaction sequences
+            globalRedoHistoryStack = []; 
             updateHistoryControlButtonsState();
         }
 
@@ -575,16 +576,14 @@
         }
 
         function applyHistorySnapshotState(snapshot) {
-            globalHistoryLockActive = true; // Avoid cascading cyclic history mutations
+            globalHistoryLockActive = true; 
             
             appData = snapshot.appData;
             autocompleteWeightsLedger = snapshot.autocompleteWeightsLedger;
             autocompleteEngineActiveStatus = snapshot.autocompleteEngineActiveStatus;
 
-            // Immediately flush settings to cache mappings
             localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
             
-            // Synchronize active layout visuals
             if (appData.backgroundImage) {
                 document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
             } else {
@@ -598,20 +597,18 @@
             }
 
             updateAutocompleteToggleButtonView();
+            evaluatePwaNoticeVisibility();
             
-            // Re-anchor active directory index visibility references
             let foundCurrentFolderNode = findNodeInTreeById(appData.notebooks, getCurrentFolder().id);
             if (!foundCurrentFolderNode) {
                 navigationHistory = [appData.notebooks];
             } else {
-                // Refresh folder references down the stack trace map
                 navigationHistory = navigationHistory.map(folder => findNodeInTreeById(appData.notebooks, folder.id) || folder);
             }
 
             renderGrid();
             updateHistoryControlButtonsState();
             
-            // Queue sync pipeline to Supabase database clusters
             clearTimeout(cloudSyncTimer);
             cloudSyncTimer = setTimeout(() => { syncToCloud(); }, 2500);
 
@@ -635,13 +632,30 @@
         }
 
         // --- WARNING NOTICES CONTROLS ---
+        function evaluatePwaNoticeVisibility() {
+            const noticePanel = document.getElementById('pwa-device-notice');
+            // Condition: Only trigger notice layout if the instance is strictly offline AND flag is absent
+            if (!navigator.onLine && !appData.pwaNoticeDismissed) {
+                noticePanel.classList.remove('hidden');
+            } else {
+                noticePanel.classList.add('hidden');
+            }
+        }
+
         function dismissPwaNotice() {
             appData.pwaNoticeDismissed = true;
             document.getElementById('pwa-device-notice').classList.add('hidden');
             saveData();
         }
 
+        // Reactive window listening events supporting connection tracking
+        window.addEventListener('online', evaluatePwaNoticeVisibility);
+        window.addEventListener('offline', evaluatePwaNoticeVisibility);
+
         async function initializeApp() {
+            if (isAppInitialized) return;
+            isAppInitialized = true;
+
             let embeddedPayload = {};
             try {
                 const payloadElement = document.getElementById('offline-embedded-data-payload');
@@ -655,8 +669,7 @@
             if (embeddedPayload && embeddedPayload.notebooks) {
                 console.log("Running fully loaded internal offline file structure state.");
                 appData = embeddedPayload;
-                // Exporters get warning visibility reset on unique load loops
-                delete appData.pwaNoticeDismissed;
+                delete appData.pwaNoticeDismissed; // Exporters reset local awareness prompts
             } else {
                 const { data: { user } } = await sb.auth.getUser();
                 currentUserSession = user;
@@ -671,7 +684,7 @@
                         .maybeSingle();
 
                     if (data && data.data) {
-                        console.log("Loaded isolated notebook state from cloud storage.");
+                        console.log("Loaded notebook state from cloud storage.");
                         appData = data.data;
                     } else {
                         appData = { notebooks: { id: 'root', name: 'Root', type: 'folder', children: [], created_at: Date.now(), updated_at: Date.now() }, backgroundImage: "" };
@@ -687,13 +700,14 @@
                 }
             }
 
+            if (!appData.notebooks || !appData.notebooks.children) {
+                appData.notebooks = { id: 'root', name: 'Root', type: 'folder', children: [], created_at: Date.now(), updated_at: Date.now() };
+            }
+
             if (!appData.notebooks.created_at) appData.notebooks.created_at = Date.now();
             if (!appData.notebooks.updated_at) appData.notebooks.updated_at = Date.now();
 
-            // Evaluate warning card visibility criteria rules
-            if (!appData.pwaNoticeDismissed) {
-                document.getElementById('pwa-device-notice').classList.remove('hidden');
-            }
+            evaluatePwaNoticeVisibility();
 
             if (appData.autocompleteWeightsLedger) autocompleteWeightsLedger = appData.autocompleteWeightsLedger; 
             if (appData.userCustomDictionary) { 
@@ -714,7 +728,12 @@
             updateHistoryControlButtonsState();
         }
 
-        initializeApp();
+        // Single fallback event bootstrapper hook
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (!isAppInitialized) initializeApp();
+            }, 300);
+        });
 
         let cloudSyncTimer;
 
@@ -735,8 +754,8 @@
         }
 
         async function syncToCloud() {
-            if (!currentUserSession) {
-                console.log("Local changes saved. Sign in to leverage cloud sync.");
+            if (!currentUserSession || !navigator.onLine) {
+                console.log("Sync skipped: Client offline or unauthenticated.");
                 return;
             }
             
@@ -868,7 +887,6 @@
                 let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size');
                 if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference;
 
-                // Stripping flag prior to packaging so export targets display notice again on init
                 const dataToBundle = JSON.parse(JSON.stringify(appData));
                 delete dataToBundle.pwaNoticeDismissed;
 
@@ -887,7 +905,7 @@
                 virtualDocumentAnchorDownloadTriggerElementNode.click();
                 document.body.removeChild(virtualDocumentAnchorDownloadTriggerElementNode);
             } catch(err) {
-                console.error("Export configuration generation execution failure exception error:", err);
+                console.error("Export error:", err);
                 alert("Metadata pipeline assembly parsing failure.");
             }
         }
@@ -910,7 +928,6 @@
                     } else {
                         const targetTime = matchingTargetItem.updated_at || 0;
                         if (sourceItem.updated_at > targetTime) {
-                            console.log(`Reconciling node override: "${matchingTargetItem.name}" -> Updated via newer timestamp match.`);
                             matchingTargetItem.name = sourceItem.name;
                             matchingTargetItem.updated_at = sourceItem.updated_at;
                             if (sourceItem.type === 'file') {
@@ -933,7 +950,7 @@
         }
 
         function executeManualBackgroundArtResizeAction(sliderPercentageValue) {
-            pushGlobalStateSnapshot(); // Capture scaling transformations
+            pushGlobalStateSnapshot(); 
             const displayLabel = document.getElementById('bg-size-label-display');
             if (displayLabel) displayLabel.textContent = sliderPercentageValue + "%";
 
@@ -976,7 +993,7 @@
             const name = prompt(promptMsg);
             if (!name || name.trim() === "") return;
 
-            pushGlobalStateSnapshot(); // Capture item addition sequences
+            pushGlobalStateSnapshot(); 
 
             const currentTimeStampTag = Date.now();
             const newItem = { 
@@ -1012,7 +1029,7 @@
             event.stopPropagation(); 
             if (!confirm("Are you sure you want to delete this item?")) return;
             
-            pushGlobalStateSnapshot(); // Capture element deletion sequences
+            pushGlobalStateSnapshot(); 
             
             const currentFolder = getCurrentFolder();
             currentFolder.children = currentFolder.children.filter(item => item.id !== itemId);
@@ -1028,7 +1045,7 @@
             const targetName = prompt(`Modify descriptor text for "${currentName}":`, currentName);
             if (!targetName || targetName.trim() === "" || targetName.trim() === currentName) return;
 
-            pushGlobalStateSnapshot(); // Capture rename modification steps
+            pushGlobalStateSnapshot(); 
 
             item.name = targetName.trim();
             item.updated_at = Date.now();
@@ -1042,7 +1059,7 @@
 
         function duplicateItem(item, event) {
             event.stopPropagation();
-            pushGlobalStateSnapshot(); // Capture asset cloning workflows
+            pushGlobalStateSnapshot(); 
             
             const currentFolder = getCurrentFolder();
             let clonedItem = JSON.parse(JSON.stringify(item));
@@ -1079,7 +1096,7 @@
                 return;
             }
             
-            pushGlobalStateSnapshot(); // Capture clipboard relational structural swaps
+            pushGlobalStateSnapshot(); 
             
             const index = movingItemParentArrayRef.indexOf(movingItemPointer);
             if (index > -1) movingItemParentArrayRef.splice(index, 1);
@@ -1132,9 +1149,8 @@
 
         function closeEditor() {
             if (activeFilePointer) {
-                // Check if text was modified inside text editor node frame boundaries
                 if (document.getElementById('markdown-input').value !== activeFilePointer.content) {
-                    pushGlobalStateSnapshot(); // Lock text adjustments inside snapshot logs
+                    pushGlobalStateSnapshot(); 
                     activeFilePointer.content = document.getElementById('markdown-input').value;
                     activeFilePointer.updated_at = Date.now();
                     saveData();
@@ -1187,7 +1203,6 @@
                     cellInput.placeholder = '...';
                     
                     cellInput.onchange = () => {
-                        // Capture snapshot specifically when user commits focus away from cells matrix targets
                         pushGlobalStateSnapshot();
                     };
                     
@@ -1210,7 +1225,7 @@
 
         function expandInfiniteCanvasDimension(dimension) {
             if (!activeFilePointer) return;
-            pushGlobalStateSnapshot(); // Store canvas matrix boundary extensions
+            pushGlobalStateSnapshot(); 
             if (dimension === 'row') activeFilePointer.gridRowsCount++;
             if (dimension === 'col') activeFilePointer.gridColsCount++;
             activeFilePointer.updated_at = Date.now();
@@ -1344,7 +1359,7 @@
             const textWord = inputField.value.trim();
             if (!textWord) return;
 
-            pushGlobalStateSnapshot(); // Capture vocab injection traces
+            pushGlobalStateSnapshot(); 
 
             dynamicallyLearnedTokens.add(textWord);
             autocompleteWeightsLedger[textWord] = (autocompleteWeightsLedger[textWord] || 0) + 5;
@@ -1553,7 +1568,7 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    pushGlobalStateSnapshot(); // Store custom theme changes in rollback buffer logs
+                    pushGlobalStateSnapshot(); 
                     appData.backgroundImage = e.target.result;
                     document.body.style.backgroundImage = `url('${e.target.result}')`;
                     saveData();
@@ -1587,7 +1602,7 @@
                             "[Cancel] -> Overwrite and clear all current structures with this backup."
                         );
 
-                        pushGlobalStateSnapshot(); // Allow user to undo complete file database imports
+                        pushGlobalStateSnapshot(); 
 
                         if (shouldMerge) {
                             deepMergeNoteTrees(appData.notebooks, parsed.notebooks);
@@ -1612,11 +1627,10 @@
                             alert("Database successfully replaced with imported file.");
                         }
 
-                        // Evaluate notice panel context criteria rules again post-import action
                         if (appData.pwaNoticeDismissed) {
                             document.getElementById('pwa-device-notice').classList.add('hidden');
                         } else {
-                            document.getElementById('pwa-device-notice').classList.remove('hidden');
+                            evaluatePwaNoticeVisibility();
                         }
 
                         if (parsed.hasOwnProperty('autocompleteEngineActiveStatus')) {
@@ -1634,7 +1648,7 @@
                         alert("Invalid file format. Ensure this is a valid backup JSON or HTML note file.");
                     }
                 } catch (err) { 
-                    alert("Error parsing notebook bundle data."); 
+                    alert("Error parsing notebook data."); 
                 }
             };
             r.readAsText(file); input.value = '';
