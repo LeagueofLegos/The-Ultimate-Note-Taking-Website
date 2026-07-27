@@ -20,7 +20,6 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
-            /* FIXED: Combined variable metrics to safely override cover behaviors with custom dimension inputs */
             background-size: var(--user-bg-size, cover) !important;
             background-position: center center !important;
             background-repeat: no-repeat !important;
@@ -137,7 +136,6 @@
             background-color: var(--accent-color);
             color: var(--dustloop-dark);
         }
-        .btn-shadow { box-shadow: 0 0 10px rgba(46, 204, 113, 0.2); }
         .btn-utility { border-color: #444; color: var(--text-dim); }
 
         .btn-paste {
@@ -259,14 +257,10 @@
         .dict-input { background: #000; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 3px; flex: 1; outline: none; font-size: 13px; }
         .dict-input:focus { border-color: var(--accent-color); }
         
-        /* FIXED: Added styling parameters for the manual background resolution tracking node */
         .bg-slider-container { display: flex; align-items: center; gap: 10px; background: #0c0c0e; padding: 8px 12px; border-radius: 4px; border: 1px solid var(--dustloop-border); margin-top: 5px; }
         .bg-range-input { flex: 1; cursor: pointer; accent-color: var(--accent-color); }
         .bg-label-txt { font-family: monospace; font-size: 12px; color: var(--accent-color); min-width: 45px; text-align: right; }
 
-        /* ==========================================
-           TECH GIANT RESPONSIVE MOBILE ARCHITECTURE
-           ========================================== */
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -283,7 +277,7 @@
             }
             .btn {
                 flex: 1 1 calc(50% - 8px);
-                padding: 12px 10px; /* Enhanced mobile target sizing */
+                padding: 12px 10px;
                 font-size: 13px;
                 text-align: center;
                 display: inline-flex;
@@ -292,7 +286,7 @@
             }
             .search-box {
                 max-width: 100%;
-                font-size: 16px; /* Prevents auto-zoom alignment scale updates in mobile Chrome */
+                font-size: 16px;
             }
             .grid {
                 grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
@@ -312,7 +306,6 @@
             .item-name {
                 font-size: 13px;
             }
-            /* Reposition actionable configuration nodes safely for smaller screens */
             .card-action {
                 width: 28px;
                 height: 28px;
@@ -323,20 +316,19 @@
             .btn-rename { bottom: 4px; right: 4px; top: auto; }
             .btn-duplicate { top: 4px; left: 4px; }
 
-            /* Editor View Split Window Transformation */
             .editor-layout {
                 height: auto;
                 min-height: calc(100vh - 180px);
             }
             .workspace-dual-grid {
-                grid-template-columns: 1fr; /* Stacks split screen view horizontally */
+                grid-template-columns: 1fr;
                 gap: 15px;
             }
             .pane-wrapper {
-                height: 400px; /* Locks structural bounds vertically for sequential view scrolling */
+                height: 400px;
             }
             .editor-pane {
-                font-size: 16px; /* Safeguards input target dimensions from mobile browser shifts */
+                font-size: 16px;
             }
             .help-content {
                 grid-template-columns: 1fr;
@@ -357,7 +349,7 @@
                 <button class="btn btn-utility" onclick="document.getElementById('bg-upload').click()">🖼️ BG Art</button>
                 
                 <button class="btn btn-paste" id="btn-paste" onclick="pasteItem()" style="display: none;">📋 Paste Here</button>
-                <button class="btn btn-folder" id="btn-folder" onclick="createNewItem('folder')">+ New Folder</button>
+                <button class="btn btn-main" id="btn-folder" onclick="createNewItem('folder')">+ New Folder</button>
                 <button class="btn" id="btn-file" onclick="createNewItem('file')" style="display: none;">+ New File</button>
                 <button class="btn btn-main" id="btn-link-card" onclick="createNewItem('link')" style="display: none;">🔗 + New Link Card</button>
             </div>
@@ -452,10 +444,8 @@
         </div>
     </div>
 
-    <!-- Inject the Supabase JS Bundle via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Initialize Supabase Client (FIXED: Removed trailing /rest/v1/ path)
         const SUPABASE_URL = "https://wivkakmfvfbucllnovct.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_h4WZFQAnbAXZH7Jxno78Jg_LA_8tm-4";
         const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -465,7 +455,6 @@
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
 
-        // Core base fighting game vocabulary data maps - separators explicitly added as standalone tokens
         const baseFgcWords = [">", ",", "~", "2A", "2B", "2C", "5A", "5B", "5C", "236A", "236B", "236C", "214A", "214B", "214C", "66B", "66C", "iad", "dl.", "(land)", "(delay)"];
         let dynamicallyLearnedTokens = new Set();
         let activeSuggestionIndex = 0;
@@ -476,15 +465,13 @@
         let autocompleteWeightsLedger = {};
         let autocompleteEngineActiveStatus = true;
 
-        // Initialize data structure safely (FIXED: Avoided redeclaring activeFilePointer, etc.)
         let appData = {
-            notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] },[cite: 1]
-            backgroundImage: ""[cite: 1]
+            notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] },
+            backgroundImage: ""
         };
 
-        // Setup asynchronous data loading sequence
         async function initializeApp() {
-            // 1. Try to load from Cloud first
+            console.log("Checking Supabase for cloud data...");
             const { data, error } = await supabase
                 .from('user_notes')
                 .select('data')
@@ -495,67 +482,58 @@
                 console.log("Loaded notebook state directly from cloud storage.");
                 appData = data.data;
             } 
-            // 2. Fallback to LocalStorage if cloud is unavailable or empty
             else if (rawData) {
                 try {
-                    let parsed = JSON.parse(rawData);[cite: 1]
-                    if (parsed && parsed.notebooks) {[cite: 1]
-                        appData = parsed;[cite: 1]
+                    let parsed = JSON.parse(rawData);
+                    if (parsed && parsed.notebooks) {
+                        appData = parsed;
                     }
                 } catch(e) {
                     console.error("Local recovery execution fallback error:", e);
                 }
-            } // <-- THIS closing bracket finishes the "else if"
+            }
 
-            // Process variables into app context (THIS IS YOUR CORRECT BLOCK)
-            if (appData.autocompleteWeightsLedger) autocompleteWeightsLedger = appData.autocompleteWeightsLedger;[cite: 1]
-            if (appData.userCustomDictionary) {[cite: 1]
-                appData.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));[cite: 1]
-            }[cite: 1]
-            if (appData.hasOwnProperty('autocompleteEngineActiveStatus')) {[cite: 1]
-                autocompleteEngineActiveStatus = appData.autocompleteEngineActiveStatus;[cite: 1]
-            }[cite: 1]
-            if (appData.savedWallpaperSizeOverride) {[cite: 1]
-                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);[cite: 1]
-            }[cite: 1]
-            if (appData.backgroundImage) {[cite: 1]
-                document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;[cite: 1]
-            }[cite: 1]
+            if (appData.autocompleteWeightsLedger) autocompleteWeightsLedger = appData.autocompleteWeightsLedger;
+            if (appData.userCustomDictionary) {
+                appData.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));
+            }
+            if (appData.hasOwnProperty('autocompleteEngineActiveStatus')) {
+                autocompleteEngineActiveStatus = appData.autocompleteEngineActiveStatus;
+            }
+            if (appData.savedWallpaperSizeOverride) {
+                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);
+            }
+            if (appData.backgroundImage) {
+                document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
+            }
 
-            // Trigger initial rendering mechanics
-            navigationHistory = [appData.notebooks];[cite: 1]
-            renderGrid();[cite: 1]
+            navigationHistory = [appData.notebooks];
+            renderGrid();
         }
 
-        // Replace the original bottom-level script render call with our async loader
         initializeApp();
         
-        // Global tracking variable for the cloud debounce process
         let cloudSyncTimer;
 
         function saveData() {
-            appData.autocompleteWeightsLedger = autocompleteWeightsLedger;[cite: 1]
-            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);[cite: 1]
-            appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus;[cite: 1]
+            appData.autocompleteWeightsLedger = autocompleteWeightsLedger;
+            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);
+            appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus;
             
-            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size');[cite: 1]
-            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference;[cite: 1]
+            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size');
+            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference;
             
-            // 1. Maintain Instant Local Cache (No UI Lag)
-            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));[cite: 1]
+            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
 
-            // 2. Trigger Debounced Cloud Auto-Sync
             clearTimeout(cloudSyncTimer);
             cloudSyncTimer = setTimeout(() => {
                 syncToCloud();
-            }, 2500); // Waits for 2.5 seconds of typing silence before syncing
+            }, 2500);
         }
 
-        // Function to handle the actual Supabase database insertion
         async function syncToCloud() {
             console.log("Auto-syncing to cloud database...");
             
-            // We target row ID 1 to continually overwrite and update your single master state
             const { data, error } = await supabase
                 .from('user_notes')
                 .upsert({ id: 1, data: appData });
@@ -566,18 +544,16 @@
                 console.log("Cloud sync complete.");
             }
         }
-        // CUSTOM HANDLER LOGIC TO APPLY MANUAL SIZING WHILE CHECKING WINDOW WIDTHS
+
         function executeManualBackgroundArtResizeAction(sliderPercentageValue) {
             const displayLabel = document.getElementById('bg-size-label-display');
             if (displayLabel) displayLabel.textContent = sliderPercentageValue + "%";
 
-            // If the user shrinks the browser into a mobile viewport scale, adapt automatically
             if (window.innerWidth < 900) {
                 document.documentElement.style.setProperty('--user-bg-size', 'cover');
                 return;
             }
 
-            // Otherwise, on full screen, use the user's explicit dimension size override
             let formattedSizingMetric = `100% ${sliderPercentageValue}%`;
             document.documentElement.style.setProperty('--user-bg-size', formattedSizingMetric);
             saveData();
@@ -593,7 +569,6 @@
             saveData();
         }
 
-        // Watch browser resizing live to drop overrides and snap back to cover layouts when side-window docking
         window.onresize = function() {
             if (activeFilePointer && appData.savedWallpaperSizeOverride && window.innerWidth >= 900) {
                 document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);
@@ -679,6 +654,7 @@
             renderGrid();
         }
 
+        // Shared data persistence checking systems
         function startMoveItem(item, event) {
             event.stopPropagation();
             movingItemPointer = item;
@@ -704,7 +680,6 @@
             renderGrid();
         }
 
-        // Fixed checking references inside nested loop trees
         function isDescendant(parentFolder, targetFolder) {
             if (parentFolder.type !== 'folder' || !parentFolder.children) return false;
             for (let child of parentFolder.children) {
@@ -728,7 +703,6 @@
             document.getElementById('browser-view').classList.add('hidden');
             document.getElementById('editor-view').classList.remove('hidden');
             
-            // Sync slider track layout state cleanly with loaded storage percentages on file open
             if (appData.savedWallpaperSizeOverride && appData.savedWallpaperSizeOverride !== 'cover') {
                 let parsedNumericMatch = appData.savedWallpaperSizeOverride.match(/\s(\d+)%/);
                 if (parsedNumericMatch) {
@@ -908,12 +882,10 @@
             renderParsedHtmlStringIntoPreviewPane(rawText);
         }
 
-        // Dummy placeholder to catch original script bindings safely 
         function toggleLabVideoPlayer() {
             alert("Lab Video Player configuration node interface opened.");
         }
 
-        // Handled manual URL overrides safely inside loop sequences
         function handleMarkdownLinkClick(url, event) {
             event.preventDefault();
             const choice = confirm(`Link clicked: ${url}\n\n[OK] -> Open URL\n[Cancel] -> Edit link`);
