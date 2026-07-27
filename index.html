@@ -443,12 +443,12 @@
             </div>
         </div>
     </div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const SUPABASE_URL = "https://wivkakmfvfbucllnovct.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_h4WZFQAnbAXZH7Jxno78Jg_LA_8tm-4";
-        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const sb = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let rawData = localStorage.getItem('ultimate_notes_data');
         let activeFilePointer = null; 
@@ -472,7 +472,7 @@
 
         async function initializeApp() {
             console.log("Checking Supabase for cloud data...");
-            const { data, error } = await supabase
+            const { data, error } = await sb
                 .from('user_notes')
                 .select('data')
                 .eq('id', 1)
@@ -534,7 +534,7 @@
         async function syncToCloud() {
             console.log("Auto-syncing to cloud database...");
             
-            const { data: cloudResponse, error } = await supabase
+            const { data: cloudResponse, error } = await sb
                 .from('user_notes')
                 .upsert({ id: 1, data: appData });
 
