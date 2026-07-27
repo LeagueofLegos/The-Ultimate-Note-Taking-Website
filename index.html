@@ -484,31 +484,31 @@
             } 
             else if (rawData) {
                 try {
-                    let parsed = JSON.parse(rawData);
-                    if (parsed && parsed.notebooks) {
-                        appData = parsed;
+                    let parsed = JSON.parse(rawData);[cite: 1]
+                    if (parsed && parsed.notebooks) {[cite: 1]
+                        appData = parsed;[cite: 1]
                     }
                 } catch(e) {
                     console.error("Local recovery execution fallback error:", e);
                 }
             }
 
-            if (appData.autocompleteWeightsLedger) autocompleteWeightsLedger = appData.autocompleteWeightsLedger;
-            if (appData.userCustomDictionary) {
-                appData.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));
-            }
-            if (appData.hasOwnProperty('autocompleteEngineActiveStatus')) {
-                autocompleteEngineActiveStatus = appData.autocompleteEngineActiveStatus;
-            }
-            if (appData.savedWallpaperSizeOverride) {
-                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);
-            }
-            if (appData.backgroundImage) {
-                document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
-            }
+            if (appData.autocompleteWeightsLedger) autocompleteWeightsLedger = appData.autocompleteWeightsLedger;[cite: 1]
+            if (appData.userCustomDictionary) {[cite: 1]
+                appData.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));[cite: 1]
+            }[cite: 1]
+            if (appData.hasOwnProperty('autocompleteEngineActiveStatus')) {[cite: 1]
+                autocompleteEngineActiveStatus = appData.autocompleteEngineActiveStatus;[cite: 1]
+            }[cite: 1]
+            if (appData.savedWallpaperSizeOverride) {[cite: 1]
+                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);[cite: 1]
+            }[cite: 1]
+            if (appData.backgroundImage) {[cite: 1]
+                document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;[cite: 1]
+            }[cite: 1]
 
-            navigationHistory = [appData.notebooks];
-            renderGrid();
+            navigationHistory = [appData.notebooks];[cite: 1]
+            renderGrid();[cite: 1]
         }
 
         initializeApp();
@@ -516,14 +516,14 @@
         let cloudSyncTimer;
 
         function saveData() {
-            appData.autocompleteWeightsLedger = autocompleteWeightsLedger;
-            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);
-            appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus;
+            appData.autocompleteWeightsLedger = autocompleteWeightsLedger;[cite: 1]
+            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);[cite: 1]
+            appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus;[cite: 1]
             
-            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size');
-            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference;
+            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size');[cite: 1]
+            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference;[cite: 1]
             
-            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
+            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));[cite: 1]
 
             clearTimeout(cloudSyncTimer);
             cloudSyncTimer = setTimeout(() => {
@@ -534,7 +534,7 @@
         async function syncToCloud() {
             console.log("Auto-syncing to cloud database...");
             
-            const { data, error } = await supabase
+            const { data: cloudResponse, error } = await supabase
                 .from('user_notes')
                 .upsert({ id: 1, data: appData });
 
@@ -881,10 +881,6 @@
             renderParsedHtmlStringIntoPreviewPane(rawText);
         }
 
-        function toggleLabVideoPlayer() {
-            alert("Lab Video Player configuration node interface opened.");
-        }
-
         function handleMarkdownLinkClick(url, event) {
             event.preventDefault();
             const choice = confirm(`Link clicked: ${url}\n\n[OK] -> Open URL\n[Cancel] -> Edit link`);
@@ -924,7 +920,6 @@
             alert(`"${textWord}" successfully registered into your local autocomplete lookup dataset!`);
         }
 
-        // Sync local dictionary controls natively inside framework functions
         function toggleMasterAutocompleteState() {
             autocompleteEngineActiveStatus = !autocompleteEngineActiveStatus;
             saveData();
@@ -1176,7 +1171,18 @@
         }
     </script>
 
-<script data-goatcounter="https://leagueoflegos.goatcounter.com/count"
-        async src="//gc.zgo.at/count.js"></script>
+    <script>
+        // Safe Analytics Script Bootstrapper wrapper
+        (function() {
+            var scriptElement = document.createElement('script');
+            scriptElement.src = "https://gc.zgo.at/count.js";
+            scriptElement.async = true;
+            scriptElement.setAttribute('data-goatcounter', "https://leagueoflegos.goatcounter.com/count");
+            scriptElement.onerror = function() {
+                console.log("Analytics script loading skipped via client block rules.");
+            };
+            document.body.appendChild(scriptElement);
+        })();
+    </script>
 </body>
 </html>
