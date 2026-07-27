@@ -545,10 +545,6 @@
             }
         }
 
-                // =========================================================================
-        // IMPLEMENTATION OF MISSING CORE FUNCTIONS FOR THE ULTIMATE NOTE-TAKING APP
-        // =========================================================================
-
         let navigationHistory = [appData.notebooks];
 
         /**
@@ -624,8 +620,8 @@
                     btnMov.title = 'Move Item';
                     btnMov.onclick = (e) => startMoveItem(item, e);
 
-                    // Core Clickable Grid Item Content Card Panel Wrapper Box View Frame
-                    const card = document.createElement('div');
+                    // Core Clickable Grid Item Content Card Panel Wrapper - Switched to 'button' for Extension/Vim Clickability
+                    const card = document.createElement('button');
                     card.className = `grid-item ${movingItemPointer && movingItemPointer.id === item.id ? 'moving' : ''}`;
                     
                     let itemIcon = '📁';
@@ -707,19 +703,15 @@
             if (!targetFolder.children) targetFolder.children = [];
 
             sourceFolder.children.forEach(sourceItem => {
-                // Look for existing item matches by ID, or fallback to matching by type and name
                 let matchingTargetItem = targetFolder.children.find(targetItem => {
                     return targetItem.id === sourceItem.id || (targetItem.name === sourceItem.name && targetItem.type === sourceItem.type);
                 });
 
                 if (matchingTargetItem) {
-                    // If it's a folder, traverse deep recursion matching checks down down down
                     if (sourceItem.type === 'folder') {
                         deepMergeNoteTrees(matchingTargetItem, sourceItem);
                     }
-                    // For files/links, skip overwriting to protect current local content
                 } else {
-                    // Not found in target directory container path frame stack context map: perform deep safe cloning merge operation copy array
                     const clonedNewNodeAsset = JSON.parse(JSON.stringify(sourceItem));
                     targetFolder.children.push(clonedNewNodeAsset);
                 }
@@ -1012,7 +1004,7 @@
                 if (isBulletRow) {
                     const matches = line.match(/^\s*[-\*]\s*(.*$)/);
                     if (!insideListBlock) {
-                        processedHtml += "<ul>";
+                        processedHtml += "</ul><ul>";
                         insideListBlock = true;
                     }
                     processedHtml += `<li>${matches[1]}</li>`;
@@ -1353,7 +1345,6 @@
     </script>
 
     <script>
-        // Safe Analytics Script Bootstrapper wrapper
         (function() {
             var scriptElement = document.createElement('script');
             scriptElement.src = "https://gc.zgo.at/count.js";
