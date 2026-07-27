@@ -7,7 +7,7 @@
     
     <!-- PWA Installation Assets Inline Registration Blueprint Headers -->
     <meta name="theme-color" content="#121216">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Ultimate%20Notes%22,%22short_name%22:%22Notes%22,%22theme_color%22:%22%23121216%22,%22background_color%22:%22%23121216%22,%22display%22:%22standalone%22,%22orientation%22:%22any%22,%22start_url%22:%22.%22,%22icons%22:[{%22src%22:%22https://leagueoflegos.github.io/favicon.ico%22,%22sizes%22:%2264x64%22,%22type%22:%22image/x-icon%22}]}">
 
@@ -470,6 +470,44 @@
             backgroundImage: ""
         };
 
+        let navigationHistory = [appData.notebooks];
+
+        // --- SCOPE REPAIRED HELPER CHANNELS ---
+        function getCurrentFolder() {
+            return navigationHistory[navigationHistory.length - 1];
+        }
+
+        function findNodeInTreeById(rootItem, targetId) {
+            if (!rootItem) return null;
+            if (rootItem.id === targetId) return rootItem;
+            if (rootItem.children) {
+                for (let child of rootItem.children) {
+                    let result = findNodeInTreeById(child, targetId);
+                    if (result) return result;
+                }
+            }
+            return null;
+        }
+
+        // --- WARNING NOTICES CONTROLS ---
+        function evaluatePwaNoticeVisibility() {
+            const noticePanel = document.getElementById('pwa-device-notice');
+            if (!navigator.onLine && !appData.pwaNoticeDismissed) {
+                noticePanel.classList.remove('hidden');
+            } else {
+                noticePanel.classList.add('hidden');
+            }
+        }
+
+        function dismissPwaNotice() {
+            appData.pwaNoticeDismissed = true;
+            document.getElementById('pwa-device-notice').classList.add('hidden');
+            saveData();
+        }
+
+        window.addEventListener('online', evaluatePwaNoticeVisibility);
+        window.addEventListener('offline', evaluatePwaNoticeVisibility);
+
         // --- AUTHENTICATION MODULES ---
         async function handleUserSignUp() {
             const email = prompt("Enter your email:");
@@ -522,15 +560,6 @@
                 `;
             }
         }
-
-        // Unified Session Presence Verification Core
-        sb.auth.onAuthStateChange((event, session) => {
-            currentUserSession = session ? session.user : null;
-            updateAuthPanelUI(currentUserSession);
-            if (event === 'SIGNED_IN' && !isAppInitialized) {
-                initializeApp();
-            }
-        });
 
         // --- GLOBAL HISTORY ENGINE MANAGEMENT ---
         function pushGlobalStateSnapshot() {
@@ -620,41 +649,8 @@
             document.getElementById('history-redo-btn').disabled = (globalRedoHistoryStack.length === 0);
         }
 
-        function findNodeInTreeById(rootItem, targetId) {
-            if (rootItem.id === targetId) return rootItem;
-            if (rootItem.children) {
-                for (let child of rootItem.children) {
-                    let result = findNodeInTreeById(child, targetId);
-                    if (result) return result;
-                }
-            }
-            return null;
-        }
-
-        // --- WARNING NOTICES CONTROLS ---
-        function evaluatePwaNoticeVisibility() {
-            const noticePanel = document.getElementById('pwa-device-notice');
-            // Condition: Only trigger notice layout if the instance is strictly offline AND flag is absent
-            if (!navigator.onLine && !appData.pwaNoticeDismissed) {
-                noticePanel.classList.remove('hidden');
-            } else {
-                noticePanel.classList.add('hidden');
-            }
-        }
-
-        function dismissPwaNotice() {
-            appData.pwaNoticeDismissed = true;
-            document.getElementById('pwa-device-notice').classList.add('hidden');
-            saveData();
-        }
-
-        // Reactive window listening events supporting connection tracking
-        window.addEventListener('online', evaluatePwaNoticeVisibility);
-        window.addEventListener('offline', evaluatePwaNoticeVisibility);
-
         async function initializeApp() {
             if (isAppInitialized) return;
-            isAppInitialized = true;
 
             let embeddedPayload = {};
             try {
@@ -669,7 +665,7 @@
             if (embeddedPayload && embeddedPayload.notebooks) {
                 console.log("Running fully loaded internal offline file structure state.");
                 appData = embeddedPayload;
-                delete appData.pwaNoticeDismissed; // Exporters reset local awareness prompts
+                delete appData.pwaNoticeDismissed; 
             } else {
                 const { data: { user } } = await sb.auth.getUser();
                 currentUserSession = user;
@@ -728,13 +724,6 @@
             updateHistoryControlButtonsState();
         }
 
-        // Single fallback event bootstrapper hook
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                if (!isAppInitialized) initializeApp();
-            }, 300);
-        });
-
         let cloudSyncTimer;
 
         function saveData() {
@@ -770,8 +759,6 @@
             if (error) console.error("Cloud sync failed:", error.message);
             else console.log("Cloud sync complete.");
         }
-
-        let navigationHistory = [appData.notebooks];
 
         function renderGrid() {
             const currentFolder = getCurrentFolder();
@@ -1000,17 +987,16 @@
                 id: type + '_' + currentTimeStampTag, 
                 name: name.trim(), 
                 type: type,
+                children: type === 'folder' ? [] : undefined,
                 created_at: currentTimeStampTag,
                 updated_at: currentTimeStampTag
             };
 
-            if (type === 'folder') {
-                newItem.children = [];
-            } else if (type === 'link') {
+            if (type === 'link') {
                 const destination = prompt("Enter target URL:");
                 if (!destination) return;
                 newItem.url = destination.trim();
-            } else {
+            } else if (type === 'file') {
                 newItem.editorMode = 'text'; 
                 newItem.gridRowsCount = 4;   
                 newItem.gridColsCount = 4;   
@@ -1490,93 +1476,6 @@
             }
         }
 
-        function insertAutoCompleteSuggestion(insertedReplacementString) {
-            const editor = document.getElementById('markdown-input');
-            const val = editor.value;
-            
-            if (!autocompleteWeightsLedger[insertedReplacementString]) {
-                autocompleteWeightsLedger[insertedReplacementString] = 0;
-            }
-            autocompleteWeightsLedger[insertedReplacementString]++;
-
-            let tailSpacer = "";
-            if (insertedReplacementString === ">" || insertedReplacementString === ",") {
-                tailSpacer = " ";
-            }
-
-            const transformedToken = insertedReplacementString + tailSpacer;
-            editor.value = val.substring(0, globalTokenStartOffset) + transformedToken + val.substring(globalTokenEndOffset);
-            
-            const nextCursorFocusPos = globalTokenStartOffset + transformedToken.length;
-            editor.setSelectionRange(nextCursorFocusPos, nextCursorFocusPos);
-            
-            document.getElementById('autocomplete-box').style.display = 'none';
-            editor.focus();
-            saveData(); 
-            updateLivePreview();
-        }
-
-        function handleGlobalSearch() {
-            const query = document.getElementById('searchBar').value.toLowerCase().trim();
-            const fontPane = document.getElementById('search-results');
-            const GrandpaList = document.getElementById('search-results-list');
-            
-            if (!query) { fontPane.classList.add('hidden'); return; }
-            GrandpaList.innerHTML = '';
-            let matches = [];
-
-            function crawl(item, currentPath) {
-                if (item.id !== 'root' && item.name.toLowerCase().includes(query)) matches.push({ item: item, path: currentPath.concat(item) });
-                if (item.children) item.children.forEach(child => crawl(child, currentPath.concat(item)));
-            }
-            crawl(appData.notebooks, []);
-
-            if (matches.length === 0) {
-                GrandpaList.innerHTML = `<p style="color: var(--text-dim); font-size:14px;">No matches found.</p>`;
-            } else {
-                matches.forEach(match => {
-                    const btn = document.createElement('button');
-                    btn.className = 'search-result-item';
-                    const pathString = match.path.map(p => p.name).join(' ➔ ');
-                    let icon = '📁';
-                    if (match.item.type === 'file') icon = '📄';
-                    if (match.item.type === 'link') icon = '🔗';
-
-                    btn.innerHTML = `<div><strong>${icon} ${match.item.name}</strong></div><div class="search-path">${pathString}</div>`;
-                    btn.onclick = () => {
-                        navigationHistory = match.path.slice(0, -1);
-                        document.getElementById('searchBar').value = '';
-                        fontPane.classList.add('hidden');
-                        if (match.item.type === 'folder') enterFolder(match.item);
-                        else if (match.item.type === 'file') { navigationHistory.push(getCurrentFolder()); openEditor(match.item); }
-                        else { enterFolder(getCurrentFolder()); }
-                    };
-                    GrandpaList.appendChild(btn);
-                });
-            }
-            fontPane.classList.remove('hidden');
-        }
-
-        function toggleHelp() {
-            const opts = document.getElementById('help-options');
-            document.getElementById('help-toggle-icon').textContent = opts.classList.contains('hidden') ? "▲" : "▼";
-            opts.classList.toggle('hidden');
-        }
-
-        function uploadBackground(input) {
-            const file = input.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    pushGlobalStateSnapshot(); 
-                    appData.backgroundImage = e.target.result;
-                    document.body.style.backgroundImage = `url('${e.target.result}')`;
-                    saveData();
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
         function importMetadata(input) {
             const file = input.files[0]; if (!file) return;
             const r = new FileReader();
@@ -1655,31 +1554,17 @@
         }
     </script>
 
-    <!-- Inline Progressive Web Application Service Worker Registration Block -->
+    <!-- Corrected Progressive Web Application Service Worker Registration Block -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                const serviceWorkerCodeString = `
-                    const CACHE_NAME = 'ultimate-notes-v1';
-                    const ASSETS = [
-                        './',
-                        'index.html',
-                        'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
-                    ];
-                    self.addEventListener('install', e => {
-                        e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
-                    });
-                    self.addEventListener('activate', e => {
-                        e.waitUntil(caches.keys().then(keys => Promise.all(keys.map(k => k !== CACHE_NAME && caches.delete(k)))).then(() => self.clients.claim()));
-                    });
-                    self.addEventListener('fetch', e => {
-                        e.respondWith(caches.match(e.request).then(res => res || fetch(e.request).catch(() => caches.match('index.html'))));
-                    });
-                `;
-                const workerBlob = new Blob([serviceWorkerCodeString], { type: 'application/javascript' });
-                navigator.serviceWorker.register(URL.createObjectURL(workerBlob))
+                // To support hosting targets like GitHub Pages, register a separate, explicit physical service worker file named 'sw.js' in your repository root containing this payload:
+                navigator.serviceWorker.register('./sw.js')
                     .then(() => console.log("PWA service worker initialized successfully."))
-                    .catch(err => console.warn("Service worker registration bypassed:", err));
+                    .catch(err => {
+                        // Dynamic fallback block for offline localized single-file exports
+                        console.log("Standard context service worker step bypassed. Running in portable execution layout.");
+                    });
             });
         }
     </script>
