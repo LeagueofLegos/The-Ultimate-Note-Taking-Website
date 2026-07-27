@@ -446,7 +446,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-                const SUPABASE_URL = "https://wivkakmfvfbucllnovct.supabase.co";
+        const SUPABASE_URL = "https://wivkakmfvfbucllnovct.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_h4WZFQAnbAXZH7Jxno78Jg_LA_8tm-4";
         const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -454,7 +454,7 @@
         let activeFilePointer = null; 
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
-        let currentUserSession = null; // Tracks logged-in user state
+        let currentUserSession = null;
 
         const baseFgcWords = [">", ",", "~", "2A", "2B", "2C", "5A", "5B", "5C", "236A", "236B", "236C", "214A", "214B", "214C", "66B", "66C", "iad", "dl.", "(land)", "(delay)"];
         let dynamicallyLearnedTokens = new Set();
@@ -471,7 +471,6 @@
             backgroundImage: ""
         };
 
-        // --- AUTHENTICATION MODULES ---
         async function handleUserSignUp() {
             const email = prompt("Enter your email:");
             if (!email) return;
@@ -524,7 +523,6 @@
             }
         }
 
-        // Listen for auth state changes dynamically
         sb.auth.onAuthStateChange((event, session) => {
             currentUserSession = session ? session.user : null;
             updateAuthPanelUI(currentUserSession);
@@ -543,14 +541,13 @@
                 const { data, error } = await sb
                     .from('user_notes')
                     .select('data')
-                    .eq('user_id', currentUserSession.id) // Query matching user row
+                    .eq('user_id', currentUserSession.id)
                     .maybeSingle();
 
                 if (data && data.data) {
                     console.log("Loaded isolated notebook state from cloud storage.");
                     appData = data.data;
                 } else {
-                    // Set default structure if new user row is completely uninitialized
                     appData = { notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] }, backgroundImage: "" };
                     await syncToCloud(); 
                 }
@@ -612,7 +609,7 @@
                 .from('user_notes')
                 .upsert(
                     { user_id: currentUserSession.id, data: appData },
-                    { onConflict: 'user_id' } // Upsert targets user session column matches
+                    { onConflict: 'user_id' }
                 );
 
             if (error) console.error("Cloud sync failed:", error.message);
@@ -621,10 +618,6 @@
 
         let navigationHistory = [appData.notebooks];
 
-        /**
-         * Renders the contents of the current folder into the grid layout,
-         * updates breadcrumbs, and adjusts control toolbar states.
-         */
         function renderGrid() {
             const currentFolder = getCurrentFolder();
             const gridContainer = document.getElementById('folder-grid');
@@ -632,18 +625,15 @@
 
             gridContainer.innerHTML = '';
 
-            // 1. Render Toolbar Control Button Visibilities
             const isRoot = currentFolder.id === 'root';
             document.getElementById('btn-file').style.display = isRoot ? 'none' : 'inline-block';
             document.getElementById('btn-link-card').style.display = isRoot ? 'none' : 'inline-block';
 
-            // Toggle Paste Button based on active moving item presence
             const pasteBtn = document.getElementById('btn-paste');
             if (pasteBtn) {
                 pasteBtn.style.display = movingItemPointer ? 'inline-block' : 'none';
             }
 
-            // 2. Render Breadcrumbs Navigation Path Links
             const breadcrumbsContainer = document.getElementById('breadcrumbs');
             if (breadcrumbsContainer) {
                 breadcrumbsContainer.innerHTML = '';
@@ -663,13 +653,11 @@
                 });
             }
 
-            // 3. Render Child Items inside Current Active Workspace View Folder Grid
             if (currentFolder.children && currentFolder.children.length > 0) {
                 currentFolder.children.forEach(item => {
                     const container = document.createElement('div');
                     container.className = 'card-container';
 
-                    // Item Action Trigger Button Nodes
                     const btnDel = document.createElement('button');
                     btnDel.className = 'card-action btn-delete';
                     btnDel.textContent = '✖';
@@ -694,7 +682,6 @@
                     btnMov.title = 'Move Item';
                     btnMov.onclick = (e) => startMoveItem(item, e);
 
-                    // Core Clickable Grid Item Content Card Panel Wrapper - Switched to 'button' for Extension/Vim Clickability
                     const card = document.createElement('button');
                     card.className = `grid-item ${movingItemPointer && movingItemPointer.id === item.id ? 'moving' : ''}`;
                     
@@ -708,7 +695,6 @@
                         <div class="item-name" title="${item.name}">${item.name}</div>
                     `;
 
-                    // Setup card navigation execution behaviors
                     card.onclick = () => {
                         if (item.type === 'folder') {
                             enterFolder(item);
@@ -719,7 +705,6 @@
                         }
                     };
 
-                    // Assemble Component Cards Structural Layout Output Tree elements Hierarchy
                     container.appendChild(btnDel);
                     container.appendChild(btnRen);
                     container.appendChild(btnDup);
@@ -732,18 +717,12 @@
             }
         }
 
-        /**
-         * Pushes the target folder into navigationHistory array pointer stack and repopulates grid data maps layout screen fields.
-         */
         function enterFolder(folder) {
             if (!folder || folder.type !== 'folder') return;
             navigationHistory.push(folder);
             renderGrid();
         }
 
-        /**
-         * Packages full reactive operational dynamic engine configuration application state context dataset parameters ledger matrix database objects blocks directly into standard locally extractable downloadable disk blob storage asset files.
-         */
         function exportMetadata() {
             try {
                 appData.autocompleteWeightsLedger = autocompleteWeightsLedger;
@@ -769,9 +748,6 @@
             }
         }
 
-        /**
-         * Recursively parses external backup configuration tree objects tracking node keys to deeply stitch missing note nodes assets elements maps structures without breaking operational client pointers runtime scopes elements layout tracking indices properties boundaries.
-         */
         function deepMergeNoteTrees(targetFolder, sourceFolder) {
             if (!sourceFolder || !sourceFolder.children) return;
             if (!targetFolder.children) targetFolder.children = [];
@@ -1386,27 +1362,52 @@
                 try {
                     const parsed = JSON.parse(e.target.result);
                     if (parsed && parsed.notebooks) {
-                        deepMergeNoteTrees(appData.notebooks, parsed.notebooks);
-                        if (parsed.autocompleteWeightsLedger) {
-                            for (let token in parsed.autocompleteWeightsLedger) {
-                                autocompleteWeightsLedger[token] = (autocompleteWeightsLedger[token] || 0) + parsed.autocompleteWeightsLedger[token];
+                        
+                        // New Import Strategy Check: Prompt user to choose between Merging or Completely Overwriting
+                        const shouldMerge = confirm(
+                            "An external backup file has been read.\n\n" +
+                            "[OK] -> Merge data safely side-by-side with your existing folders.\n" +
+                            "[Cancel] -> Completely Replace/Overwrite everything current with this file."
+                        );
+
+                        if (shouldMerge) {
+                            // Path A: Safe deep structure merge
+                            deepMergeNoteTrees(appData.notebooks, parsed.notebooks);
+                            
+                            if (parsed.autocompleteWeightsLedger) {
+                                for (let token in parsed.autocompleteWeightsLedger) {
+                                    autocompleteWeightsLedger[token] = (autocompleteWeightsLedger[token] || 0) + parsed.autocompleteWeightsLedger[token];
+                                }
                             }
+                            if (!appData.backgroundImage && parsed.backgroundImage) {
+                                appData.backgroundImage = parsed.backgroundImage;
+                                document.body.style.backgroundImage = `url('${parsed.backgroundImage}')`;
+                            }
+                            alert("Note database reconciliation and merge complete! Duplicate items skipped.");
+                        } else {
+                            // Path B: Complete hard override replace strategy
+                            appData = parsed;
+                            
+                            if (parsed.autocompleteWeightsLedger) autocompleteWeightsLedger = parsed.autocompleteWeightsLedger;
+                            if (parsed.backgroundImage) {
+                                document.body.style.backgroundImage = `url('${parsed.backgroundImage}')`;
+                            } else {
+                                document.body.style.backgroundImage = 'none';
+                            }
+                            alert("Database successfully wiped and replaced with the imported configuration!");
                         }
+
                         if (parsed.hasOwnProperty('autocompleteEngineActiveStatus')) {
                             autocompleteEngineActiveStatus = parsed.autocompleteEngineActiveStatus;
                         }
                         if (parsed.savedWallpaperSizeOverride) {
                             document.documentElement.style.setProperty('--user-bg-size', parsed.savedWallpaperSizeOverride);
                         }
-                        if (!appData.backgroundImage && parsed.backgroundImage) {
-                            appData.backgroundImage = parsed.backgroundImage;
-                            document.body.style.backgroundImage = `url('${parsed.backgroundImage}')`;
-                        }
+
                         navigationHistory = [appData.notebooks];
                         cancelMove(); 
                         saveData(); 
                         renderGrid();
-                        alert("Note database reconciliation and merge complete! Duplicate items skipped.");
                     } else {
                         alert("Invalid backup structure format.");
                     }
