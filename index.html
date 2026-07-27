@@ -117,7 +117,7 @@
         }
         .nav-link:hover { text-decoration: underline; }
 
-        .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+        .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
         .btn {
             background-color: var(--panel-color);
@@ -152,6 +152,15 @@
             animation: pulse 2s infinite;
         }
         .btn-paste:hover { background-color: #2563eb; border-color: #2563eb; }
+
+        #auth-status-container {
+            display: inline-flex;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--dustloop-border);
+        }
 
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
@@ -327,6 +336,10 @@
         <header>
             <h1>ULTIMATE NOTES</h1>
             <div class="controls">
+                <!-- Restored Core Cloud Sync Auth Container Anchor Node -->
+                <div id="auth-status-container"></div>
+                <hr style="border:0; border-left:1px solid var(--dustloop-border); height:30px; margin:0 4px; align-self:center;">
+
                 <!-- Global Workspace History Execution Triggers -->
                 <button class="btn btn-utility" id="history-undo-btn" onclick="executeUndoAction()" disabled>↶ Undo</button>
                 <button class="btn btn-utility" id="history-redo-btn" onclick="executeRedoAction()" disabled>↷ Redo</button>
@@ -472,7 +485,7 @@
 
         let navigationHistory = [appData.notebooks];
 
-        // --- SCOPE REPAIRED HELPER CHANNELS ---
+        // --- GLOBAL SCOPE REPAIRED HELPER CHANNELS ---
         function getCurrentFolder() {
             return navigationHistory[navigationHistory.length - 1];
         }
@@ -537,16 +550,8 @@
         }
 
         function updateAuthPanelUI(user) {
-            const headerControls = document.querySelector('header .controls');
-            let authBox = document.getElementById('auth-status-container');
-            
-            if (!authBox) {
-                authBox = document.createElement('div');
-                authBox.id = 'auth-status-container';
-                authBox.style.display = 'inline-flex';
-                authBox.style.gap = '8px';
-                headerControls.insertBefore(authBox, headerControls.firstChild);
-            }
+            const authBox = document.getElementById('auth-status-container');
+            if (!authBox) return;
 
             if (user) {
                 authBox.innerHTML = `
@@ -651,6 +656,7 @@
 
         async function initializeApp() {
             if (isAppInitialized) return;
+            isAppInitialized = true;
 
             let embeddedPayload = {};
             try {
@@ -1098,15 +1104,6 @@
             renderGrid();
         }
 
-        function isDescendant(parentFolder, targetFolder) {
-            if (parentFolder.type !== 'folder' || !parentFolder.children) return false;
-            for (let child of parentFolder.children) {
-                if (child.id === targetFolder.id) return true;
-                if (child.type === 'folder' && isDescendant(child, targetFolder)) return true;
-            }
-            return false;
-        }
-
         function cancelMove() { movingItemPointer = null; movingItemParentArrayRef = null; renderGrid(); }
 
         function openEditor(fileItem) {
@@ -1329,54 +1326,6 @@
             }
         }
 
-        function parseContextVocabulariesFromActiveFile(textData) {
-            if (!textData) return;
-            const blocks = textData.split(/\s+/);
-            blocks.forEach(token => {
-                let cleanWord = token.replace(/[\[\]#\-]/g, '').trim();
-                if (cleanWord.length >= 1 && !baseFgcWords.includes(cleanWord)) {
-                    dynamicallyLearnedTokens.add(cleanWord);
-                }
-            });
-        }
-
-        function registerCustomVocabularyWordViaPanel() {
-            const inputField = document.getElementById('custom-vocab-input');
-            const textWord = inputField.value.trim();
-            if (!textWord) return;
-
-            pushGlobalStateSnapshot(); 
-
-            dynamicallyLearnedTokens.add(textWord);
-            autocompleteWeightsLedger[textWord] = (autocompleteWeightsLedger[textWord] || 0) + 5;
-            
-            saveData();
-            inputField.value = '';
-            alert(`"${textWord}" successfully registered into your local autocomplete lookup dataset!`);
-        }
-
-        function toggleMasterAutocompleteState() {
-            autocompleteEngineActiveStatus = !autocompleteEngineActiveStatus;
-            saveData();
-            updateAutocompleteToggleButtonView();
-            if (!autocompleteEngineActiveStatus) {
-                document.getElementById('autocomplete-box').style.display = 'none';
-            }
-        }
-
-        function updateAutocompleteToggleButtonView() {
-            const btn = document.getElementById('master-autocomplete-toggle-btn');
-            if (autocompleteEngineActiveStatus) {
-                btn.textContent = "Autocomplete: ACTIVE";
-                btn.style.background = "#2ecc71";
-                btn.style.borderColor = "#2ecc71";
-            } else {
-                btn.textContent = "Autocomplete: SILENCED";
-                btn.style.background = "#e74c3c";
-                btn.style.borderColor = "#e74c3c";
-            }
-        }
-
         function handleEditorInput(event) {
             updateLivePreview();
             if (!autocompleteEngineActiveStatus) return;
@@ -1558,11 +1507,9 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // To support hosting targets like GitHub Pages, register a separate, explicit physical service worker file named 'sw.js' in your repository root containing this payload:
                 navigator.serviceWorker.register('./sw.js')
                     .then(() => console.log("PWA service worker initialized successfully."))
                     .catch(err => {
-                        // Dynamic fallback block for offline localized single-file exports
                         console.log("Standard context service worker step bypassed. Running in portable execution layout.");
                     });
             });
