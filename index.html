@@ -446,7 +446,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        const SUPABASE_URL = "https://wivkakmfvfbucllnovct.supabase.co";
+                const SUPABASE_URL = "https://wivkakmfvfbucllnovct.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_h4WZFQAnbAXZH7Jxno78Jg_LA_8tm-4";
         const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -454,6 +454,7 @@
         let activeFilePointer = null; 
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
+        let currentUserSession = null; // Tracks logged-in user state
 
         const baseFgcWords = [">", ",", "~", "2A", "2B", "2C", "5A", "5B", "5C", "236A", "236B", "236C", "214A", "214B", "214C", "66B", "66C", "iad", "dl.", "(land)", "(delay)"];
         let dynamicallyLearnedTokens = new Set();
@@ -470,24 +471,93 @@
             backgroundImage: ""
         };
 
-        async function initializeApp() {
-            console.log("Checking Supabase for cloud data...");
-            const { data, error } = await sb
-                .from('user_notes')
-                .select('data')
-                .eq('id', 1)
-                .maybeSingle();
+        // --- AUTHENTICATION MODULES ---
+        async function handleUserSignUp() {
+            const email = prompt("Enter your email:");
+            if (!email) return;
+            const password = prompt("Enter a strong password (min 6 chars):");
+            if (!password) return;
 
-            if (data && data.data) {
-                console.log("Loaded notebook state directly from cloud storage.");
-                appData = data.data;
-            } 
-            else if (rawData) {
+            const { data, error } = await sb.auth.signUp({ email, password });
+            if (error) alert("Sign up failed: " + error.message);
+            else alert("Sign up successful! Please log in.");
+        }
+
+        async function handleUserLogIn() {
+            const email = prompt("Enter email:");
+            if (!email) return;
+            const password = prompt("Enter password:");
+            if (!password) return;
+
+            const { data, error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) alert("Login failed: " + error.message);
+        }
+
+        async function handleUserLogOut() {
+            await sb.auth.signOut();
+            localStorage.removeItem('ultimate_notes_data');
+            location.reload();
+        }
+
+        function updateAuthPanelUI(user) {
+            const headerControls = document.querySelector('header .controls');
+            let authBox = document.getElementById('auth-status-container');
+            
+            if (!authBox) {
+                authBox = document.createElement('div');
+                authBox.id = 'auth-status-container';
+                authBox.style.display = 'inline-flex';
+                authBox.style.gap = '8px';
+                headerControls.insertBefore(authBox, headerControls.firstChild);
+            }
+
+            if (user) {
+                authBox.innerHTML = `
+                    <span style="font-size:12px; color:var(--text-dim); align-self:center;">👤 ${user.email}</span>
+                    <button class="btn btn-utility" style="padding:4px 10px; font-size:12px;" onclick="handleUserLogOut()">Sign Out</button>
+                `;
+            } else {
+                authBox.innerHTML = `
+                    <button class="btn btn-main" style="padding:4px 10px; font-size:12px;" onclick="handleUserLogIn()">Log In</button>
+                    <button class="btn btn-utility" style="padding:4px 10px; font-size:12px;" onclick="handleUserSignUp()">Sign Up</button>
+                `;
+            }
+        }
+
+        // Listen for auth state changes dynamically
+        sb.auth.onAuthStateChange((event, session) => {
+            currentUserSession = session ? session.user : null;
+            updateAuthPanelUI(currentUserSession);
+            if (event === 'SIGNED_IN') {
+                initializeApp();
+            }
+        });
+
+        async function initializeApp() {
+            const { data: { user } } = await sb.auth.getUser();
+            currentUserSession = user;
+            updateAuthPanelUI(currentUserSession);
+
+            if (currentUserSession) {
+                console.log(`Checking cloud data for User: ${currentUserSession.id}`);
+                const { data, error } = await sb
+                    .from('user_notes')
+                    .select('data')
+                    .eq('user_id', currentUserSession.id) // Query matching user row
+                    .maybeSingle();
+
+                if (data && data.data) {
+                    console.log("Loaded isolated notebook state from cloud storage.");
+                    appData = data.data;
+                } else {
+                    // Set default structure if new user row is completely uninitialized
+                    appData = { notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] }, backgroundImage: "" };
+                    await syncToCloud(); 
+                }
+            } else if (rawData) {
                 try {
                     let parsed = JSON.parse(rawData); 
-                    if (parsed && parsed.notebooks) { 
-                        appData = parsed; 
-                    }
+                    if (parsed && parsed.notebooks) { appData = parsed; }
                 } catch(e) {
                     console.error("Local recovery execution fallback error:", e);
                 }
@@ -512,7 +582,7 @@
         }
 
         initializeApp();
-        
+
         let cloudSyncTimer;
 
         function saveData() {
@@ -532,17 +602,21 @@
         }
 
         async function syncToCloud() {
-            console.log("Auto-syncing to cloud database...");
-            
-            const { data: cloudResponse, error } = await sb
-                .from('user_notes')
-                .upsert({ id: 1, data: appData });
-
-            if (error) {
-                console.error("Cloud sync failed:", error.message);
-            } else {
-                console.log("Cloud sync complete.");
+            if (!currentUserSession) {
+                console.log("Local changes saved. Sign in to leverage cloud sync.");
+                return;
             }
+            
+            console.log("Auto-syncing data block to personal cloud storage...");
+            const { error } = await sb
+                .from('user_notes')
+                .upsert(
+                    { user_id: currentUserSession.id, data: appData },
+                    { onConflict: 'user_id' } // Upsert targets user session column matches
+                );
+
+            if (error) console.error("Cloud sync failed:", error.message);
+            else console.log("Cloud sync complete.");
         }
 
         let navigationHistory = [appData.notebooks];
