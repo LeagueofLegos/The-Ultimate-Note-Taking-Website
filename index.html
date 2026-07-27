@@ -502,9 +502,35 @@
             return null;
         }
 
+        function parseContextVocabulariesFromActiveFile(textData) {
+            if (!textData) return;
+            const blocks = textData.split(/\s+/);
+            blocks.forEach(token => {
+                let cleanWord = token.replace(/[\[\]#\-]/g, '').trim();
+                if (cleanWord.length >= 1 && !baseFgcWords.includes(cleanWord)) {
+                    dynamicallyLearnedTokens.add(cleanWord);
+                }
+            });
+        }
+
+        function updateAutocompleteToggleButtonView() {
+            const btn = document.getElementById('master-autocomplete-toggle-btn');
+            if (!btn) return;
+            if (autocompleteEngineActiveStatus) {
+                btn.textContent = "Autocomplete: ACTIVE";
+                btn.style.background = "#2ecc71";
+                btn.style.borderColor = "#2ecc71";
+            } else {
+                btn.textContent = "Autocomplete: SILENCED";
+                btn.style.background = "#e74c3c";
+                btn.style.borderColor = "#e74c3c";
+            }
+        }
+
         // --- WARNING NOTICES CONTROLS ---
         function evaluatePwaNoticeVisibility() {
             const noticePanel = document.getElementById('pwa-device-notice');
+            if (!noticePanel) return;
             if (!navigator.onLine && !appData.pwaNoticeDismissed) {
                 noticePanel.classList.remove('hidden');
             } else {
@@ -550,7 +576,17 @@
         }
 
         function updateAuthPanelUI(user) {
-            const authBox = document.getElementById('auth-status-container');
+            const headerControls = document.querySelector('header .controls');
+            let authBox = document.getElementById('auth-status-container');
+            
+            if (!authBox && headerControls) {
+                authBox = document.createElement('div');
+                authBox.id = 'auth-status-container';
+                authBox.style.display = 'inline-flex';
+                authBox.style.gap = '8px';
+                headerControls.insertBefore(authBox, headerControls.firstChild);
+            }
+
             if (!authBox) return;
 
             if (user) {
@@ -650,8 +686,10 @@
         }
 
         function updateHistoryControlButtonsState() {
-            document.getElementById('history-undo-btn').disabled = (globalUndoHistoryStack.length === 0);
-            document.getElementById('history-redo-btn').disabled = (globalRedoHistoryStack.length === 0);
+            const undoBtn = document.getElementById('history-undo-btn');
+            const redoBtn = document.getElementById('history-redo-btn');
+            if (undoBtn) undoBtn.disabled = (globalUndoHistoryStack.length === 0);
+            if (redoBtn) redoBtn.disabled = (globalRedoHistoryStack.length === 0);
         }
 
         async function initializeApp() {
@@ -871,38 +909,6 @@
             renderGrid();
         }
 
-        function exportMetadata() {
-            try {
-                appData.autocompleteWeightsLedger = autocompleteWeightsLedger;
-                appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);
-                appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus;
-                
-                let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size');
-                if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference;
-
-                const dataToBundle = JSON.parse(JSON.stringify(appData));
-                delete dataToBundle.pwaNoticeDismissed;
-
-                const stringifiedState = JSON.stringify(dataToBundle);
-                const fullSourceDocument = document.documentElement.outerHTML;
-
-                const stateRegexPattern = /<script id="offline-embedded-data-payload" type="application\/json">([\s\S]*?)<\/script>/i;
-                const dynamicCompiledApplicationOutput = fullSourceDocument.replace(stateRegexPattern, `<script id="offline-embedded-data-payload" type="application/json">${stringifiedState}<\/script>`);
-
-                const rawExecutableBinaryBlobRef = new Blob([dynamicCompiledApplicationOutput], { type: 'text/html' });
-                const virtualDocumentAnchorDownloadTriggerElementNode = document.createElement('a');
-                virtualDocumentAnchorDownloadTriggerElementNode.href = URL.createObjectURL(rawExecutableBinaryBlobRef);
-                virtualDocumentAnchorDownloadTriggerElementNode.download = `ultimate_notes_executable_workspace_${Date.now()}.html`;
-                
-                document.body.appendChild(virtualDocumentAnchorDownloadTriggerElementNode);
-                virtualDocumentAnchorDownloadTriggerElementNode.click();
-                document.body.removeChild(virtualDocumentAnchorDownloadTriggerElementNode);
-            } catch(err) {
-                console.error("Export error:", err);
-                alert("Metadata pipeline assembly parsing failure.");
-            }
-        }
-
         function deepMergeNoteTrees(targetFolder, sourceFolder) {
             if (!sourceFolder || !sourceFolder.children) return;
             if (!targetFolder.children) targetFolder.children = [];
@@ -940,304 +946,6 @@
                 }
             });
             targetFolder.updated_at = Date.now();
-        }
-
-        function executeManualBackgroundArtResizeAction(sliderPercentageValue) {
-            pushGlobalStateSnapshot(); 
-            const displayLabel = document.getElementById('bg-size-label-display');
-            if (displayLabel) displayLabel.textContent = sliderPercentageValue + "%";
-
-            if (window.innerWidth < 900) {
-                document.documentElement.style.setProperty('--user-bg-size', 'cover');
-                return;
-            }
-
-            let formattedSizingMetric = `100% ${sliderPercentageValue}%`;
-            document.documentElement.style.setProperty('--user-bg-size', formattedSizingMetric);
-            saveData();
-        }
-
-        function resetBackgroundScalingPreference() {
-            pushGlobalStateSnapshot();
-            document.documentElement.style.removeProperty('--user-bg-size');
-            const slider = document.getElementById('bg-size-scaler-track');
-            const displayLabel = document.getElementById('bg-size-label-display');
-            if (slider) slider.value = 100;
-            if (displayLabel) displayLabel.textContent = "100%";
-            if (appData.savedWallpaperSizeOverride) delete appData.savedWallpaperSizeOverride;
-            saveData();
-        }
-
-        window.onresize = function() {
-            if (activeFilePointer && appData.savedWallpaperSizeOverride && window.innerWidth >= 900) {
-                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);
-            } else {
-                document.documentElement.style.setProperty('--user-bg-size', 'cover');
-            }
-        };
-
-        function createNewItem(type) {
-            const currentFolder = getCurrentFolder();
-            let promptMsg = "Enter name:";
-            if (type === 'folder') promptMsg = "Enter folder name:";
-            if (type === 'file') promptMsg = "Enter file name:";
-            if (type === 'link') promptMsg = "Enter Shortcut Link Display Name:";
-            
-            const name = prompt(promptMsg);
-            if (!name || name.trim() === "") return;
-
-            pushGlobalStateSnapshot(); 
-
-            const currentTimeStampTag = Date.now();
-            const newItem = { 
-                id: type + '_' + currentTimeStampTag, 
-                name: name.trim(), 
-                type: type,
-                children: type === 'folder' ? [] : undefined,
-                created_at: currentTimeStampTag,
-                updated_at: currentTimeStampTag
-            };
-
-            if (type === 'link') {
-                const destination = prompt("Enter target URL:");
-                if (!destination) return;
-                newItem.url = destination.trim();
-            } else if (type === 'file') {
-                newItem.editorMode = 'text'; 
-                newItem.gridRowsCount = 4;   
-                newItem.gridColsCount = 4;   
-                newItem.canvasMatrix = {};   
-                newItem.content = "# " + newItem.name + "\n## Notes\n- Add technical insights here...";
-            }
-
-            if (!currentFolder.children) currentFolder.children = [];
-            currentFolder.children.push(newItem);
-            currentFolder.updated_at = currentTimeStampTag;
-            saveData();
-            renderGrid();
-        }
-
-        function deleteItem(itemId, event) {
-            event.stopPropagation(); 
-            if (!confirm("Are you sure you want to delete this item?")) return;
-            
-            pushGlobalStateSnapshot(); 
-            
-            const currentFolder = getCurrentFolder();
-            currentFolder.children = currentFolder.children.filter(item => item.id !== itemId);
-            currentFolder.updated_at = Date.now();
-            if (movingItemPointer && movingItemPointer.id === itemId) cancelMove();
-            saveData();
-            renderGrid();
-        }
-
-        function renameItem(item, event) {
-            event.stopPropagation();
-            const currentName = item.name;
-            const targetName = prompt(`Modify descriptor text for "${currentName}":`, currentName);
-            if (!targetName || targetName.trim() === "" || targetName.trim() === currentName) return;
-
-            pushGlobalStateSnapshot(); 
-
-            item.name = targetName.trim();
-            item.updated_at = Date.now();
-            if (item.type === 'file' && item.content.startsWith(`# ${currentName}`)) {
-                item.content = item.content.replace(`# ${currentName}`, `# ${item.name}`);
-            }
-            getCurrentFolder().updated_at = Date.now();
-            saveData();
-            renderGrid();
-        }
-
-        function duplicateItem(item, event) {
-            event.stopPropagation();
-            pushGlobalStateSnapshot(); 
-            
-            const currentFolder = getCurrentFolder();
-            let clonedItem = JSON.parse(JSON.stringify(item));
-            const rightNow = Date.now();
-            
-            clonedItem.id = item.type + '_' + rightNow;
-            clonedItem.name = `${item.name} - Copy`;
-            clonedItem.created_at = rightNow;
-            clonedItem.updated_at = rightNow;
-            
-            if (clonedItem.type === 'file' && clonedItem.content.startsWith(`# ${item.name}`)) {
-                clonedItem.content = clonedItem.content.replace(`# ${item.name}`, `# ${clonedItem.name}`);
-            }
-            
-            currentFolder.children.push(clonedItem);
-            currentFolder.updated_at = rightNow;
-            saveData();
-            renderGrid();
-        }
-
-        function startMoveItem(item, event) {
-            event.stopPropagation();
-            movingItemPointer = item;
-            movingItemParentArrayRef = getCurrentFolder().children;
-            renderGrid();
-        }
-
-        function pasteItem() {
-            if (!movingItemPointer) return;
-            const targetFolder = getCurrentFolder();
-            if (movingItemPointer.id === targetFolder.id || isDescendant(movingItemPointer, targetFolder)) {
-                alert("Error: Nesting operations invalid.");
-                cancelMove();
-                return;
-            }
-            
-            pushGlobalStateSnapshot(); 
-            
-            const index = movingItemParentArrayRef.indexOf(movingItemPointer);
-            if (index > -1) movingItemParentArrayRef.splice(index, 1);
-            if (!targetFolder.children) targetFolder.children = [];
-            
-            movingItemPointer.updated_at = Date.now();
-            targetFolder.children.push(movingItemPointer);
-            targetFolder.updated_at = Date.now();
-            
-            movingItemPointer = null;
-            movingItemParentArrayRef = null;
-            saveData();
-            renderGrid();
-        }
-
-        function cancelMove() { movingItemPointer = null; movingItemParentArrayRef = null; renderGrid(); }
-
-        function openEditor(fileItem) {
-            activeFilePointer = fileItem;
-            if (!activeFilePointer.editorMode) activeFilePointer.editorMode = 'text';
-            if (!activeFilePointer.gridRowsCount) activeFilePointer.gridRowsCount = 4;
-            if (!activeFilePointer.gridColsCount) activeFilePointer.gridColsCount = 4;
-            if (!activeFilePointer.canvasMatrix) activeFilePointer.canvasMatrix = {};
-
-            document.getElementById('editor-file-title').textContent = `EDITING FILE // ${fileItem.name.toUpperCase()}`;
-            document.getElementById('markdown-input').value = fileItem.content;
-            document.getElementById('browser-view').classList.add('hidden');
-            document.getElementById('editor-view').classList.remove('hidden');
-            
-            if (appData.savedWallpaperSizeOverride && appData.savedWallpaperSizeOverride !== 'cover') {
-                let parsedNumericMatch = appData.savedWallpaperSizeOverride.match(/\s(\d+)%/);
-                if (parsedNumericMatch) {
-                    document.getElementById('bg-size-scaler-track').value = parsedNumericMatch[1];
-                    document.getElementById('bg-size-label-display').textContent = parsedNumericMatch[1] + "%";
-                }
-            }
-
-            parseContextVocabulariesFromActiveFile(fileItem.content);
-            applyLeftPaneDisplaySettings();
-        }
-
-        function closeEditor() {
-            if (activeFilePointer) {
-                if (document.getElementById('markdown-input').value !== activeFilePointer.content) {
-                    pushGlobalStateSnapshot(); 
-                    activeFilePointer.content = document.getElementById('markdown-input').value;
-                    activeFilePointer.updated_at = Date.now();
-                    saveData();
-                }
-            }
-            activeFilePointer = null;
-            document.getElementById('editor-view').classList.add('hidden');
-            document.getElementById('browser-view').classList.remove('hidden');
-            renderGrid();
-        }
-
-        function switchLeftPaneEditorMode() {
-            if (!activeFilePointer) return;
-            activeFilePointer.editorMode = activeFilePointer.editorMode === 'text' ? 'grid' : 'text';
-            applyLeftPaneDisplaySettings();
-        }
-
-        function applyLeftPaneDisplaySettings() {
-            const modeBtn = document.getElementById('toggle-editor-mode-btn');
-            const textWrapper = document.getElementById('left-pane-text-wrapper');
-            const gridWrapper = document.getElementById('left-pane-grid-wrapper');
-
-            if (activeFilePointer.editorMode === 'grid') {
-                modeBtn.textContent = "📄 Toggle Editor to Text Mode";
-                textWrapper.classList.add('hidden');
-                gridWrapper.classList.remove('hidden');
-                buildInfiniteGridCanvasMatrixHTML();
-            } else {
-                modeBtn.textContent = "📊 Toggle Editor to Sheets Grid";
-                gridWrapper.classList.add('hidden');
-                textWrapper.classList.remove('hidden');
-                updateLivePreview();
-            }
-        }
-
-        function buildInfiniteGridCanvasMatrixHTML() {
-            const tbody = document.getElementById('infinite-canvas-matrix-body');
-            tbody.innerHTML = '';
-
-            for (let r = 0; r < activeFilePointer.gridRowsCount; r++) {
-                const tr = document.createElement('tr');
-                for (let c = 0; c < activeFilePointer.gridColsCount; c++) {
-                    const td = document.createElement('td');
-                    const cellKey = `${r}_${c}`;
-                    const cellValue = activeFilePointer.canvasMatrix[cellKey] || '';
-
-                    const cellInput = document.createElement('textarea');
-                    cellInput.className = 'cell-textarea-input';
-                    cellInput.value = cellValue;
-                    cellInput.placeholder = '...';
-                    
-                    cellInput.onchange = () => {
-                        pushGlobalStateSnapshot();
-                    };
-                    
-                    cellInput.oninput = (e) => {
-                        activeFilePointer.canvasMatrix[cellKey] = e.target.value;
-                        activeFilePointer.updated_at = Date.now();
-                        saveData();
-                        updateLivePreviewFromActiveFocusCell(e.target.value);
-                    };
-                    cellInput.onfocus = (e) => {
-                        updateLivePreviewFromActiveFocusCell(e.target.value);
-                    };
-
-                    td.appendChild(cellInput);
-                    tr.appendChild(td);
-                }
-                tbody.appendChild(tr);
-            }
-        }
-
-        function expandInfiniteCanvasDimension(dimension) {
-            if (!activeFilePointer) return;
-            pushGlobalStateSnapshot(); 
-            if (dimension === 'row') activeFilePointer.gridRowsCount++;
-            if (dimension === 'col') activeFilePointer.gridColsCount++;
-            activeFilePointer.updated_at = Date.now();
-            saveData();
-            buildInfiniteGridCanvasMatrixHTML();
-        }
-
-        function shrinkInfiniteCanvasDimension(dimension) {
-            if (!activeFilePointer) return;
-            if (dimension === 'row') {
-                if (activeFilePointer.gridRowsCount <= 1) return;
-                const targetRowIdx = activeFilePointer.gridRowsCount - 1;
-                if (!confirm(`Delete Row ${targetRowIdx + 1}? Cells inside will be lost.`)) return;
-                pushGlobalStateSnapshot();
-                for (let c = 0; c < activeFilePointer.gridColsCount; c++) { delete activeFilePointer.canvasMatrix[`${targetRowIdx}_${c}`]; }
-                activeFilePointer.gridRowsCount--;
-            }
-            if (dimension === 'col') {
-                if (activeFilePointer.gridColsCount <= 1) return;
-                const targetColIdx = activeFilePointer.gridColsCount - 1;
-                if (!confirm(`Delete Column ${targetColIdx + 1}? Cells inside will be lost.`)) return;
-                pushGlobalStateSnapshot();
-                for (let r = 0; r < activeFilePointer.gridRowsCount; r++) { delete activeFilePointer.canvasMatrix[`${r}_${targetColIdx}`]; }
-                activeFilePointer.gridColsCount--;
-            }
-            activeFilePointer.updated_at = Date.now();
-            saveData();
-            buildInfiniteGridCanvasMatrixHTML();
-            document.getElementById('markdown-preview').innerHTML = ''; 
         }
 
         function updateLivePreviewFromActiveFocusCell(text) {
@@ -1297,35 +1005,16 @@
             previewPane.innerHTML = processedHtml;
         }
 
-        function executeQuickClipboardCopyAction(textToCopy) {
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                alert(`Combo successfully copied to your system clipboard:\n"${textToCopy}"`);
-            }).catch(err => {
-                console.error("Clipboard copy failure:", err);
-            });
-        }
-
-        function updateLivePreview() {
-            if (activeFilePointer && activeFilePointer.editorMode === 'grid') return;
-            const rawText = document.getElementById('markdown-input').value;
-            renderParsedHtmlStringIntoPreviewPane(rawText);
-        }
-
-        function handleMarkdownLinkClick(url, event) {
-            event.preventDefault();
-            const choice = confirm(`Link clicked: ${url}\n\n[OK] -> Open URL\n[Cancel] -> Edit link`);
-            if (choice) {
-                window.open(url, '_blank');
-            } else {
-                const newUrl = prompt("Modify Destination Link String:", url);
-                if (newUrl && newUrl.trim() !== "") {
-                    const editor = document.getElementById('markdown-input');
-                    editor.value = editor.value.replace(url, newUrl.trim());
-                    updateLivePreview();
-                }
+        // Unified Session Presence Verification Hook
+        sb.auth.onAuthStateChange((event, session) => {
+            currentUserSession = session ? session.user : null;
+            updateAuthPanelUI(currentUserSession);
+            if (event === 'SIGNED_IN') {
+                initializeApp();
             }
-        }
+        });
 
+        // Single fallback event bootstrapper hook
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 if (!isAppInitialized) initializeApp();
