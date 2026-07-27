@@ -1238,13 +1238,12 @@
             renderParsedHtmlStringIntoPreviewPane(val);
             evaluateAutocompletePopupVisibilityEngine(event.target);
 
-            // Prevent prompt injection triggers during history undo states or backspaces
             if (event.inputType === "insertText" && val[cursor - 1] === " ") {
                 const writtenText = val.slice(0, cursor - 1);
                 const words = writtenText.split(/[\s\n]+/);
                 const finalWord = words[words.length - 1]?.replace(/[\[\]#\-.,!?;:]/g, '').trim();
                 
-                if (finalWord && finalWord.length > 0) {
+                if (autoDictAppendEngineActive && finalWord && finalWord.length > 0) {
                     const pooledTokenList = Array.from(new Set([...baseFgcWords, ...dynamicallyLearnedTokens]));
                     const matchesWord = pooledTokenList.some(w => w.toLowerCase() === finalWord.toLowerCase());
                     if (!matchesWord) {
