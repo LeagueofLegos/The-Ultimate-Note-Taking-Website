@@ -471,7 +471,7 @@
         };
 
         async function initializeApp() {
-            console.log("Checking Supabase for cloud data... ");
+            console.log("Checking Supabase for cloud data...");
             const { data, error } = await supabase
                 .from('user_notes')
                 .select('data')
@@ -867,7 +867,6 @@
             previewPane.innerHTML = processedHtml;
         }
 
-        // Clipboards helper setup nodes
         function executeQuickClipboardCopyAction(textToCopy) {
             navigator.clipboard.writeText(textToCopy).then(() => {
                 alert(`Combo successfully copied to your system clipboard:\n"${textToCopy}"`);
@@ -925,6 +924,7 @@
             alert(`"${textWord}" successfully registered into your local autocomplete lookup dataset!`);
         }
 
+        // Sync local dictionary controls natively inside framework functions
         function toggleMasterAutocompleteState() {
             autocompleteEngineActiveStatus = !autocompleteEngineActiveStatus;
             saveData();
