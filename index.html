@@ -277,6 +277,29 @@
         .bg-range-input { flex: 1; cursor: pointer; accent-color: var(--accent-color); }
         .bg-label-txt { font-family: monospace; font-size: 12px; color: var(--accent-color); min-width: 45px; text-align: right; }
 
+        .pwa-warning-panel {
+            background-color: #2a1a1a;
+            border: 2px solid #e74c3c;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #fce4e4;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pwa-close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            padding-left: 10px;
+        }
+        .pwa-close-btn:hover { color: #fff; }
+
         @media (max-width: 768px) {
             body { padding: 10px; }
             header { flex-direction: column; gap: 12px; align-items: flex-start; padding: 12px; }
@@ -438,8 +461,9 @@
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
         let currentUserSession = null;
-        let isAppInitialized = false; 
+        let isAppInitialized = false; // Prevents race-condition dual execution loops
 
+        // Workspace Undo/Redo Global Linear Stack Buffers
         let globalUndoHistoryStack = [];
         let globalRedoHistoryStack = [];
         let globalHistoryLockActive = false;
@@ -461,7 +485,7 @@
 
         let navigationHistory = [appData.notebooks];
 
-        // --- GLOBAL HELPER CHANNELS ---
+        // --- GLOBAL SCOPE REPAIRED HELPER CHANNELS ---
         function getCurrentFolder() {
             return navigationHistory[navigationHistory.length - 1];
         }
@@ -668,367 +692,6 @@
             if (redoBtn) redoBtn.disabled = (globalRedoHistoryStack.length === 0);
         }
 
-        // --- DATA INTERACTION OPERATIONS FEATURE PACK ---
-        function createNewItem(type) {
-            const currentFolder = getCurrentFolder();
-            let promptMsg = "Enter name:";
-            if (type === 'folder') promptMsg = "Enter folder name:";
-            if (type === 'file') promptMsg = "Enter file name:";
-            if (type === 'link') promptMsg = "Enter Shortcut Link Display Name:";
-            
-            const name = prompt(promptMsg);
-            if (!name || name.trim() === "") return;
-
-            pushGlobalStateSnapshot();
-
-            const currentTimeStampTag = Date.now();
-            const newItem = { 
-                id: type + '_' + currentTimeStampTag, 
-                name: name.trim(), 
-                type: type,
-                children: type === 'folder' ? [] : undefined,
-                created_at: currentTimeStampTag,
-                updated_at: currentTimeStampTag
-            };
-
-            if (type === 'link') {
-                const destination = prompt("Enter target URL:");
-                if (!destination) return;
-                newItem.url = destination.trim();
-            } else if (type === 'file') {
-                newItem.editorMode = 'text'; 
-                newItem.gridRowsCount = 4;   
-                newItem.gridColsCount = 4;   
-                newItem.canvasMatrix = {};   
-                newItem.content = "# " + newItem.name + "\n## Notes\n- Add technical insights here...";
-            }
-
-            if (!currentFolder.children) currentFolder.children = [];
-            currentFolder.children.push(newItem);
-            currentFolder.updated_at = currentTimeStampTag;
-            saveData();
-            renderGrid();
-        }
-
-        function deleteItem(itemId, event) {
-            event.stopPropagation(); 
-            if (!confirm("Are you sure you want to delete this item?")) return;
-            
-            pushGlobalStateSnapshot(); 
-            
-            const currentFolder = getCurrentFolder();
-            currentFolder.children = currentFolder.children.filter(item => item.id !== itemId);
-            currentFolder.updated_at = Date.now();
-            if (movingItemPointer && movingItemPointer.id === itemId) cancelMove();
-            saveData();
-            renderGrid();
-        }
-
-        function renameItem(item, event) {
-            event.stopPropagation();
-            const currentName = item.name;
-            const targetName = prompt(`Modify descriptor text for "${currentName}":`, currentName);
-            if (!targetName || targetName.trim() === "" || targetName.trim() === currentName) return;
-
-            pushGlobalStateSnapshot(); 
-
-            item.name = targetName.trim();
-            item.updated_at = Date.now();
-            if (item.type === 'file' && item.content.startsWith(`# ${currentName}`)) {
-                item.content = item.content.replace(`# ${currentName}`, `# ${item.name}`);
-            }
-            getCurrentFolder().updated_at = Date.now();
-            saveData();
-            renderGrid();
-        }
-
-        function duplicateItem(item, event) {
-            event.stopPropagation();
-            pushGlobalStateSnapshot(); 
-            
-            const currentFolder = getCurrentFolder();
-            let clonedItem = JSON.parse(JSON.stringify(item));
-            const rightNow = Date.now();
-            
-            clonedItem.id = item.type + '_' + rightNow;
-            clonedItem.name = `${item.name} - Copy`;
-            clonedItem.created_at = rightNow;
-            clonedItem.updated_at = rightNow;
-            
-            if (clonedItem.type === 'file' && clonedItem.content.startsWith(`# ${item.name}`)) {
-                clonedItem.content = clonedItem.content.replace(`# ${item.name}`, `# ${clonedItem.name}`);
-            }
-            
-            currentFolder.children.push(clonedItem);
-            currentFolder.updated_at = rightNow;
-            saveData();
-            renderGrid();
-        }
-
-        function startMoveItem(item, event) {
-            event.stopPropagation();
-            movingItemPointer = item;
-            movingItemParentArrayRef = getCurrentFolder().children;
-            renderGrid();
-        }
-
-        function pasteItem() {
-            if (!movingItemPointer) return;
-            const targetFolder = getCurrentFolder();
-            if (movingItemPointer.id === targetFolder.id || isDescendant(movingItemPointer, targetFolder)) {
-                alert("Error: Nesting operations invalid.");
-                cancelMove();
-                return;
-            }
-            
-            pushGlobalStateSnapshot(); 
-            
-            const index = movingItemParentArrayRef.indexOf(movingItemPointer);
-            if (index > -1) movingItemParentArrayRef.splice(index, 1);
-            if (!targetFolder.children) targetFolder.children = [];
-            
-            movingItemPointer.updated_at = Date.now();
-            targetFolder.children.push(movingItemPointer);
-            targetFolder.updated_at = Date.now();
-            
-            movingItemPointer = null;
-            movingItemParentArrayRef = null;
-            saveData();
-            renderGrid();
-        }
-
-        function isDescendant(parentFolder, targetFolder) {
-            if (parentFolder.type !== 'folder' || !parentFolder.children) return false;
-            for (let child of parentFolder.children) {
-                if (child.id === targetFolder.id) return true;
-                if (child.type === 'folder' && isDescendant(child, targetFolder)) return true;
-            }
-            return false;
-        }
-
-        function cancelMove() { movingItemPointer = null; movingItemParentArrayRef = null; renderGrid(); }
-
-        function openEditor(fileItem) {
-            activeFilePointer = fileItem;
-            if (!activeFilePointer.editorMode) activeFilePointer.editorMode = 'text';
-            if (!activeFilePointer.gridRowsCount) activeFilePointer.gridRowsCount = 4;
-            if (!activeFilePointer.gridColsCount) activeFilePointer.gridColsCount = 4;
-            if (!activeFilePointer.canvasMatrix) activeFilePointer.canvasMatrix = {};
-
-            document.getElementById('editor-file-title').textContent = `EDITING FILE // ${fileItem.name.toUpperCase()}`;
-            document.getElementById('markdown-input').value = fileItem.content;
-            document.getElementById('browser-view').classList.add('hidden');
-            document.getElementById('editor-view').classList.remove('hidden');
-            
-            if (appData.savedWallpaperSizeOverride && appData.savedWallpaperSizeOverride !== 'cover') {
-                let parsedNumericMatch = appData.savedWallpaperSizeOverride.match(/\s(\d+)%/);
-                if (parsedNumericMatch) {
-                    document.getElementById('bg-size-scaler-track').value = parsedNumericMatch[1];
-                    document.getElementById('bg-size-label-display').textContent = parsedNumericMatch[1] + "%";
-                }
-            }
-
-            parseContextVocabulariesFromActiveFile(fileItem.content);
-            applyLeftPaneDisplaySettings();
-        }
-
-        function closeEditor() {
-            if (activeFilePointer) {
-                if (document.getElementById('markdown-input').value !== activeFilePointer.content) {
-                    pushGlobalStateSnapshot(); 
-                    activeFilePointer.content = document.getElementById('markdown-input').value;
-                    activeFilePointer.updated_at = Date.now();
-                    saveData();
-                }
-            }
-            activeFilePointer = null;
-            document.getElementById('editor-view').classList.add('hidden');
-            document.getElementById('browser-view').classList.remove('hidden');
-            renderGrid();
-        }
-
-        function switchLeftPaneEditorMode() {
-            if (!activeFilePointer) return;
-            activeFilePointer.editorMode = activeFilePointer.editorMode === 'text' ? 'grid' : 'text';
-            applyLeftPaneDisplaySettings();
-        }
-
-        function applyLeftPaneDisplaySettings() {
-            const modeBtn = document.getElementById('toggle-editor-mode-btn');
-            const textWrapper = document.getElementById('left-pane-text-wrapper');
-            const gridWrapper = document.getElementById('left-pane-grid-wrapper');
-
-            if (activeFilePointer.editorMode === 'grid') {
-                modeBtn.textContent = "📄 Toggle Editor to Text Mode";
-                textWrapper.classList.add('hidden');
-                gridWrapper.classList.remove('hidden');
-                buildInfiniteGridCanvasMatrixHTML();
-            } else {
-                modeBtn.textContent = "📊 Toggle Editor to Sheets Grid";
-                gridWrapper.classList.add('hidden');
-                textWrapper.classList.remove('hidden');
-                updateLivePreview();
-            }
-        }
-
-        function buildInfiniteGridCanvasMatrixHTML() {
-            const tbody = document.getElementById('infinite-canvas-matrix-body');
-            tbody.innerHTML = '';
-
-            for (let r = 0; r < activeFilePointer.gridRowsCount; r++) {
-                const tr = document.createElement('tr');
-                for (let c = 0; c < activeFilePointer.gridColsCount; c++) {
-                    const td = document.createElement('td');
-                    const cellKey = `${r}_${c}`;
-                    const cellValue = activeFilePointer.canvasMatrix[cellKey] || '';
-
-                    const cellInput = document.createElement('textarea');
-                    cellInput.className = 'cell-textarea-input';
-                    cellInput.value = cellValue;
-                    cellInput.placeholder = '...';
-                    
-                    cellInput.onchange = () => {
-                        pushGlobalStateSnapshot();
-                    };
-                    
-                    cellInput.oninput = (e) => {
-                        activeFilePointer.canvasMatrix[cellKey] = e.target.value;
-                        activeFilePointer.updated_at = Date.now();
-                        saveData();
-                        updateLivePreviewFromActiveFocusCell(e.target.value);
-                    };
-                    cellInput.onfocus = (e) => {
-                        updateLivePreviewFromActiveFocusCell(e.target.value);
-                    };
-
-                    td.appendChild(cellInput);
-                    tr.appendChild(td);
-                }
-                tbody.appendChild(tr);
-            }
-        }
-
-        function expandInfiniteCanvasDimension(dimension) {
-            if (!activeFilePointer) return;
-            pushGlobalStateSnapshot(); 
-            if (dimension === 'row') activeFilePointer.gridRowsCount++;
-            if (dimension === 'col') activeFilePointer.gridColsCount++;
-            activeFilePointer.updated_at = Date.now();
-            saveData();
-            buildInfiniteGridCanvasMatrixHTML();
-        }
-
-        function shrinkInfiniteCanvasDimension(dimension) {
-            if (!activeFilePointer) return;
-            if (dimension === 'row') {
-                if (activeFilePointer.gridRowsCount <= 1) return;
-                const targetRowIdx = activeFilePointer.gridRowsCount - 1;
-                if (!confirm(`Delete Row ${targetRowIdx + 1}? Cells inside will be lost.`)) return;
-                pushGlobalStateSnapshot();
-                for (let c = 0; c < activeFilePointer.gridColsCount; c++) { delete activeFilePointer.canvasMatrix[`${targetRowIdx}_${c}`]; }
-                activeFilePointer.gridRowsCount--;
-            }
-            if (dimension === 'col') {
-                if (activeFilePointer.gridColsCount <= 1) return;
-                const targetColIdx = activeFilePointer.gridColsCount - 1;
-                if (!confirm(`Delete Column ${targetColIdx + 1}? Cells inside will be lost.`)) return;
-                pushGlobalStateSnapshot();
-                for (let r = 0; r < activeFilePointer.gridRowsCount; r++) { delete activeFilePointer.canvasMatrix[`${r}_${targetColIdx}`]; }
-                activeFilePointer.gridColsCount--;
-            }
-            activeFilePointer.updated_at = Date.now();
-            saveData();
-            buildInfiniteGridCanvasMatrixHTML();
-            document.getElementById('markdown-preview').innerHTML = ''; 
-        }
-
-        function updateLivePreviewFromActiveFocusCell(text) {
-            renderParsedHtmlStringIntoPreviewPane(text);
-        }
-
-        function renderParsedHtmlStringIntoPreviewPane(rawText) {
-            const previewPane = document.getElementById('markdown-preview');
-            const lines = rawText.split('\n');
-            let processedHtml = "";
-            let insideListBlock = false;
-
-            lines.forEach(line => {
-                const isBulletRow = /^\s*[-\*]\s*(.*$)/.test(line);
-
-                if (insideListBlock && !isBulletRow && line.trim() !== "") {
-                    processedHtml += "</ul>";
-                    insideListBlock = false;
-                }
-
-                if (isBulletRow) {
-                    const matches = line.match(/^\s*[-\*]\s*(.*$)/);
-                    if (!insideListBlock) {
-                        processedHtml += "</ul><ul>";
-                        insideListBlock = true;
-                    }
-                    processedHtml += `<li>${matches[1]}</li>`;
-                } else if (/^#\s(.*$)/.test(line)) {
-                    processedHtml += `<h1>${line.replace(/^#\s/, '')}</h1>`;
-                } else if (/^##\s(.*$)/.test(line)) {
-                    processedHtml += `<h2>${line.replace(/^##\s/, '')}</h2>`;
-                } else if (/^###\s(.*$)/.test(line)) {
-                    processedHtml += `<h2>${line.replace(/^###\s/, '')}</h2>`;
-                } else if (line.trim() !== "") {
-                    processedHtml += `${line}<br>`;
-                } else {
-                    processedHtml += "<br>";
-                }
-            });
-
-            if (insideListBlock) {
-                processedHtml += "</ul>";
-            }
-
-            processedHtml = processedHtml.replace(/\[(.*?)\]\((.*?)\)/gim, '<a onclick="handleMarkdownLinkClick(\'$2\', event)">$1</a>');
-
-            processedHtml = processedHtml.replace(/\[\[(.*?)\]\]/gim, function(match, comboString) {
-                const escapedCombo = comboString.replace(/'/g, "\\'");
-                return `
-                    <div class="copy-code-block-card">
-                        <div class="copy-code-text-line">${comboString}</div>
-                        <button class="btn-copy-action" onclick="executeQuickClipboardCopyAction('${escapedCombo}')">Copy Combo</button>
-                    </div>
-                `;
-            });
-
-            previewPane.innerHTML = processedHtml;
-        }
-
-        function executeQuickClipboardCopyAction(textToCopy) {
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                alert(`Combo successfully copied to your system clipboard:\n"${textToCopy}"`);
-            }).catch(err => {
-                console.error("Clipboard copy failure:", err);
-            });
-        }
-
-        function updateLivePreview() {
-            if (activeFilePointer && activeFilePointer.editorMode === 'grid') return;
-            const rawText = document.getElementById('markdown-input').value;
-            renderParsedHtmlStringIntoPreviewPane(rawText);
-        }
-
-        function handleMarkdownLinkClick(url, event) {
-            event.preventDefault();
-            const choice = confirm(`Link clicked: ${url}\n\n[OK] -> Open URL\n[Cancel] -> Edit link`);
-            if (choice) {
-                window.open(url, '_blank');
-            } else {
-                const newUrl = prompt("Modify Destination Link String:", url);
-                if (newUrl && newUrl.trim() !== "") {
-                    const editor = document.getElementById('markdown-input');
-                    editor.value = editor.value.replace(url, newUrl.trim());
-                    updateLivePreview();
-                }
-            }
-        }
-
-        // --- CORE APPLICATION LIFECYCLE MANAGEMENT ---
         async function initializeApp() {
             if (isAppInitialized) return;
             isAppInitialized = true;
@@ -1105,161 +768,251 @@
             updateHistoryControlButtonsState();
         }
 
-        function handleGlobalSearch() {
-            const query = document.getElementById('searchBar').value.toLowerCase().trim();
-            const fontPane = document.getElementById('search-results');
-            const GrandpaList = document.getElementById('search-results-list');
+        let cloudSyncTimer;
+
+        function saveData() {
+            appData.autocompleteWeightsLedger = autocompleteWeightsLedger; 
+            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens); 
+            appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus; 
             
-            if (!query) { fontPane.classList.add('hidden'); return; }
-            GrandpaList.innerHTML = '';
-            let matches = [];
+            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size'); 
+            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference; 
+            
+            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData)); 
 
-            function crawl(item, currentPath) {
-                if (item.id !== 'root' && item.name.toLowerCase().includes(query)) matches.push({ id: item.id, name: item.name, type: item.type, path: currentPath.concat(item) });
-                if (item.children) item.children.forEach(child => crawl(child, currentPath.concat(item)));
-            }
-            crawl(appData.notebooks, []);
-
-            if (matches.length === 0) {
-                GrandpaList.innerHTML = `<p style="color: var(--text-dim); font-size:14px;">No matches found.</p>`;
-            } else {
-                matches.forEach(match => {
-                    const btn = document.createElement('button');
-                    btn.className = 'search-result-item';
-                    const pathString = match.path.map(p => p.name).join(' ➔ ');
-                    let icon = '📁';
-                    if (match.type === 'file') icon = '📄';
-                    if (match.type === 'link') icon = '🔗';
-
-                    btn.innerHTML = `<div><strong>${icon} ${match.name}</strong></div><div class="search-path">${pathString}</div>`;
-                    btn.onclick = () => {
-                        navigationHistory = match.path.slice(0, -1);
-                        document.getElementById('searchBar').value = '';
-                        fontPane.classList.add('hidden');
-                        
-                        // Locate matching runtime node pointer within current active memory layout state
-                        let realNodeItem = findNodeInTreeById(appData.notebooks, match.id);
-                        if (realNodeItem) {
-                            if (realNodeItem.type === 'folder') enterFolder(realNodeItem);
-                            else if (realNodeItem.type === 'file') { navigationHistory.push(getCurrentFolder()); openEditor(realNodeItem); }
-                        } else {
-                            enterFolder(getCurrentFolder());
-                        }
-                    };
-                    GrandpaList.appendChild(btn);
-                });
-            }
-            fontPane.classList.remove('hidden');
+            clearTimeout(cloudSyncTimer);
+            cloudSyncTimer = setTimeout(() => {
+                syncToCloud();
+            }, 2500);
         }
 
-        function handleEditorInput(event) {
-            updateLivePreview();
-            if (!autocompleteEngineActiveStatus) return;
-
-            const editor = event.target;
-            const val = editor.value;
-            const cursor = editor.selectionStart;
-            const box = document.getElementById('autocomplete-box');
-
-            parseContextVocabulariesFromActiveFile(val);
-            if (cursor === 0) { box.style.display = 'none'; return; }
-
-            const charBeforeCursor = val.substring(cursor - 1, cursor);
-            let searchPrefix = "";
-            let matchDataset = [];
-
-            if (charBeforeCursor === " ") {
-                matchDataset = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
-                globalTokenStartOffset = cursor;
-                globalTokenEndOffset = cursor;
-            } else {
-                let startWordIndex = cursor - 1;
-                while (startWordIndex >= 0 && !/\s/.test(val.substring(startWordIndex, startWordIndex + 1))) {
-                    startWordIndex--;
-                }
-                startWordIndex++;
-                searchPrefix = val.substring(startWordIndex, cursor);
-
-                if (!searchPrefix) { box.style.display = 'none'; return; }
-
-                const combinedDataset = [...baseFgcWords, ...Array.from(dynamicallyLearnedTokens)];
-                matchDataset = combinedDataset.filter(word => 
-                    word.toLowerCase().startsWith(searchPrefix.toLowerCase())
-                );
-                
-                globalTokenStartOffset = startWordIndex;
-                globalTokenEndOffset = cursor;
-            }
-
-            if (matchDataset.length === 0) { box.style.display = 'none'; return; }
-
-            matchDataset.sort((a, b) => {
-                const weightA = autocompleteWeightsLedger[a] || 0;
-                const weightB = autocompleteWeightsLedger[b] || 0;
-                return weightB - weightA;
-            });
-
-            currentSuggestionsMapping = matchDataset.slice(0, 3);
-            box.innerHTML = '';
-            activeSuggestionIndex = 0;
-            
-            currentSuggestionsMapping.forEach((str, i) => {
-                const div = document.createElement('div');
-                div.className = `suggestion-item ${i === 0 ? 'active' : ''}`;
-                div.textContent = str;
-                div.onclick = () => insertAutoCompleteSuggestion(str);
-                box.appendChild(div);
-            });
-
-            box.style.display = 'block';
-            box.style.left = '35px';
-            box.style.bottom = '40px';
-        }
-
-        function handleEditorKeydowns(event) {
-            const box = document.getElementById('autocomplete-box');
-            if (event.key === 'Tab') {
-                if (box.style.display === 'block') {
-                    event.preventDefault();
-                    const items = box.getElementsByClassName('suggestion-item');
-                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].click();
-                } else {
-                    event.preventDefault();
-                    toggleMasterAutocompleteState();
-                }
+        async function syncToCloud() {
+            if (!currentUserSession || !navigator.onLine) {
+                console.log("Sync skipped: Client offline or unauthenticated.");
                 return;
             }
+            
+            console.log("Auto-syncing data block to personal cloud storage...");
+            const { error } = await sb
+                .from('user_notes')
+                .upsert(
+                    { user_id: currentUserSession.id, data: appData },
+                    { onConflict: 'user_id' }
+                );
 
-            if (box.style.display === 'block') {
-                const items = box.getElementsByClassName('suggestion-item');
-                if (event.key === 'ArrowDown') {
-                    event.preventDefault(); 
-                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.remove('active');
-                    activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
-                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.add('active');
-                } else if (event.key === 'ArrowUp') {
-                    event.preventDefault(); 
-                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.remove('active');
-                    activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
-                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.add('active');
-                } else if (event.key === 'Enter') {
-                    event.preventDefault();
-                    if (items[activeSuggestionIndex]) items[activeSuggestionIndex].click();
-                } else if (event.key === 'Escape') {
-                    box.style.display = 'none';
-                }
+            if (error) console.error("Cloud sync failed:", error.message);
+            else console.log("Cloud sync complete.");
+        }
+
+        function renderGrid() {
+            const currentFolder = getCurrentFolder();
+            const gridContainer = document.getElementById('folder-grid');
+            if (!gridContainer) return;
+
+            gridContainer.innerHTML = '';
+
+            const isRoot = currentFolder.id === 'root';
+            document.getElementById('btn-file').style.display = isRoot ? 'none' : 'inline-block';
+            document.getElementById('btn-link-card').style.display = isRoot ? 'none' : 'inline-block';
+
+            const pasteBtn = document.getElementById('btn-paste');
+            if (pasteBtn) {
+                pasteBtn.style.display = movingItemPointer ? 'inline-block' : 'none';
+            }
+
+            const breadcrumbsContainer = document.getElementById('breadcrumbs');
+            if (breadcrumbsContainer) {
+                breadcrumbsContainer.innerHTML = '';
+                navigationHistory.forEach((folder, index) => {
+                    if (index > 0) {
+                        const separator = document.createTextNode(' ➔ ');
+                        breadcrumbsContainer.appendChild(separator);
+                    }
+                    const breadcrumbLink = document.createElement('button');
+                    breadcrumbLink.className = 'nav-link';
+                    breadcrumbLink.textContent = folder.name.toUpperCase();
+                    breadcrumbLink.onclick = () => {
+                        navigationHistory = navigationHistory.slice(0, index + 1);
+                        renderGrid();
+                    };
+                    breadcrumbsContainer.appendChild(breadcrumbLink);
+                });
+            }
+
+            if (currentFolder.children && currentFolder.children.length > 0) {
+                currentFolder.children.forEach(item => {
+                    const container = document.createElement('div');
+                    container.className = 'card-container';
+
+                    const btnDel = document.createElement('button');
+                    btnDel.className = 'card-action btn-delete';
+                    btnDel.textContent = '✖';
+                    btnDel.title = 'Delete Item';
+                    btnDel.onclick = (e) => deleteItem(item.id, e);
+
+                    const btnRen = document.createElement('button');
+                    btnRen.className = 'card-action btn-rename';
+                    btnRen.textContent = '✏️';
+                    btnRen.title = 'Rename Item';
+                    btnRen.onclick = (e) => renameItem(item, e);
+
+                    const btnDup = document.createElement('button');
+                    btnDup.className = 'card-action btn-duplicate';
+                    btnDup.textContent = '⎘';
+                    btnDup.title = 'Duplicate Item';
+                    btnDup.onclick = (e) => duplicateItem(item, e);
+
+                    const btnMov = document.createElement('button');
+                    btnMov.className = 'card-action btn-move';
+                    btnMov.textContent = '⬈';
+                    btnMov.title = 'Move Item';
+                    btnMov.onclick = (e) => startMoveItem(item, e);
+
+                    const card = document.createElement('button');
+                    card.className = `grid-item ${movingItemPointer && movingItemPointer.id === item.id ? 'moving' : ''}`;
+                    
+                    let itemIcon = '📁';
+                    let iconClass = 'folder-icon';
+                    if (item.type === 'file') { itemIcon = '📄'; iconClass = 'file-icon'; }
+                    if (item.type === 'link') { itemIcon = '🔗'; iconClass = 'link-icon'; }
+
+                    card.innerHTML = `
+                        <div class="icon ${iconClass}">${itemIcon}</div>
+                        <div class="item-name" title="${item.name}">${item.name}</div>
+                    `;
+
+                    card.onclick = () => {
+                        if (item.type === 'folder') {
+                            enterFolder(item);
+                        } else if (item.type === 'file') {
+                            openEditor(item);
+                        } else if (item.type === 'link' && item.url) {
+                            window.open(item.url, '_blank');
+                        }
+                    };
+
+                    container.appendChild(btnDel);
+                    container.appendChild(btnRen);
+                    container.appendChild(btnDup);
+                    container.appendChild(btnMov);
+                    container.appendChild(card);
+                    gridContainer.appendChild(container);
+                });
+            } else {
+                gridContainer.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: var(--text-dim); padding: 40px 0; font-size: 14px;">This directory workspace folder view environment context is empty.</div>`;
             }
         }
 
-        function toggleHelp() {
-            const opts = document.getElementById('help-options');
-            document.getElementById('help-toggle-icon').textContent = opts.classList.contains('hidden') ? "▲" : "▼";
-            opts.classList.toggle('hidden');
+        function enterFolder(folder) {
+            if (!folder || folder.type !== 'folder') return;
+            navigationHistory.push(folder);
+            renderGrid();
         }
 
-        function toggleLabVideoPlayer() {
-            alert("Lab Video Player engine layer container active.");
+        function deepMergeNoteTrees(targetFolder, sourceFolder) {
+            if (!sourceFolder || !sourceFolder.children) return;
+            if (!targetFolder.children) targetFolder.children = [];
+
+            sourceFolder.children.forEach(sourceItem => {
+                if (!sourceItem.created_at) sourceItem.created_at = Date.now();
+                if (!sourceItem.updated_at) sourceItem.updated_at = Date.now();
+
+                let matchingTargetItem = targetFolder.children.find(targetItem => {
+                    return targetItem.id === sourceItem.id || (targetItem.name === sourceItem.name && targetItem.type === sourceItem.type);
+                });
+
+                if (matchingTargetItem) {
+                    if (sourceItem.type === 'folder') {
+                        deepMergeNoteTrees(matchingTargetItem, sourceItem);
+                    } else {
+                        const targetTime = matchingTargetItem.updated_at || 0;
+                        if (sourceItem.updated_at > targetTime) {
+                            matchingTargetItem.name = sourceItem.name;
+                            matchingTargetItem.updated_at = sourceItem.updated_at;
+                            if (sourceItem.type === 'file') {
+                                matchingTargetItem.content = sourceItem.content;
+                                matchingTargetItem.canvasMatrix = sourceItem.canvasMatrix || {};
+                                matchingTargetItem.gridRowsCount = sourceItem.gridRowsCount || 4;
+                                matchingTargetItem.gridColsCount = sourceItem.gridColsCount || 4;
+                                matchingTargetItem.editorMode = sourceItem.editorMode || 'text';
+                            } else if (sourceItem.type === 'link') {
+                                matchingTargetItem.url = sourceItem.url;
+                            }
+                        }
+                    }
+                } else {
+                    const clonedNewNodeAsset = JSON.parse(JSON.stringify(sourceItem));
+                    targetFolder.children.push(clonedNewNodeAsset);
+                }
+            });
+            targetFolder.updated_at = Date.now();
         }
+
+        function updateLivePreviewFromActiveFocusCell(text) {
+            renderParsedHtmlStringIntoPreviewPane(text);
+        }
+
+        function renderParsedHtmlStringIntoPreviewPane(rawText) {
+            const previewPane = document.getElementById('markdown-preview');
+            const lines = rawText.split('\n');
+            let processedHtml = "";
+            let insideListBlock = false;
+
+            lines.forEach(line => {
+                const isBulletRow = /^\s*[-\*]\s*(.*$)/.test(line);
+
+                if (insideListBlock && !isBulletRow && line.trim() !== "") {
+                    processedHtml += "</ul>";
+                    insideListBlock = false;
+                }
+
+                if (isBulletRow) {
+                    const matches = line.match(/^\s*[-\*]\s*(.*$)/);
+                    if (!insideListBlock) {
+                        processedHtml += "</ul><ul>";
+                        insideListBlock = true;
+                    }
+                    processedHtml += `<li>${matches[1]}</li>`;
+                } else if (/^#\s(.*$)/.test(line)) {
+                    processedHtml += `<h1>${line.replace(/^#\s/, '')}</h1>`;
+                } else if (/^##\s(.*$)/.test(line)) {
+                    processedHtml += `<h2>${line.replace(/^##\s/, '')}</h2>`;
+                } else if (/^###\s(.*$)/.test(line)) {
+                    processedHtml += `<h2>${line.replace(/^###\s/, '')}</h2>`;
+                } else if (line.trim() !== "") {
+                    processedHtml += `${line}<br>`;
+                } else {
+                    processedHtml += "<br>";
+                }
+            });
+
+            if (insideListBlock) {
+                processedHtml += "</ul>";
+            }
+
+            processedHtml = processedHtml.replace(/\[(.*?)\]\((.*?)\)/gim, '<a onclick="handleMarkdownLinkClick(\'$2\', event)">$1</a>');
+
+            processedHtml = processedHtml.replace(/\[\[(.*?)\]\]/gim, function(match, comboString) {
+                const escapedCombo = comboString.replace(/'/g, "\\'");
+                return `
+                    <div class="copy-code-block-card">
+                        <div class="copy-code-text-line">${comboString}</div>
+                        <button class="btn-copy-action" onclick="executeQuickClipboardCopyAction('${escapedCombo}')">Copy Combo</button>
+                    </div>
+                `;
+            });
+
+            previewPane.innerHTML = processedHtml;
+        }
+
+        // Unified Session Presence Verification Hook
+        sb.auth.onAuthStateChange((event, session) => {
+            currentUserSession = session ? session.user : null;
+            updateAuthPanelUI(currentUserSession);
+            if (event === 'SIGNED_IN') {
+                initializeApp();
+            }
+        });
 
         // Single fallback event bootstrapper hook
         window.addEventListener('DOMContentLoaded', () => {
