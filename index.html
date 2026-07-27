@@ -484,31 +484,31 @@
             } 
             else if (rawData) {
                 try {
-                    let parsed = JSON.parse(rawData);[cite: 1]
-                    if (parsed && parsed.notebooks) {[cite: 1]
-                        appData = parsed;[cite: 1]
+                    let parsed = JSON.parse(rawData); 
+                    if (parsed && parsed.notebooks) { 
+                        appData = parsed; 
                     }
                 } catch(e) {
                     console.error("Local recovery execution fallback error:", e);
                 }
             }
 
-            if (appData.autocompleteWeightsLedger) autocompleteWeightsLedger = appData.autocompleteWeightsLedger;[cite: 1]
-            if (appData.userCustomDictionary) {[cite: 1]
-                appData.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));[cite: 1]
-            }[cite: 1]
-            if (appData.hasOwnProperty('autocompleteEngineActiveStatus')) {[cite: 1]
-                autocompleteEngineActiveStatus = appData.autocompleteEngineActiveStatus;[cite: 1]
-            }[cite: 1]
-            if (appData.savedWallpaperSizeOverride) {[cite: 1]
-                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);[cite: 1]
-            }[cite: 1]
-            if (appData.backgroundImage) {[cite: 1]
-                document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;[cite: 1]
-            }[cite: 1]
+            if (appData.autocompleteWeightsLedger) autocompleteWeightsLedger = appData.autocompleteWeightsLedger; 
+            if (appData.userCustomDictionary) { 
+                appData.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token)); 
+            } 
+            if (appData.hasOwnProperty('autocompleteEngineActiveStatus')) { 
+                autocompleteEngineActiveStatus = appData.autocompleteEngineActiveStatus; 
+            } 
+            if (appData.savedWallpaperSizeOverride) { 
+                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride); 
+            } 
+            if (appData.backgroundImage) { 
+                document.body.style.backgroundImage = `url('${appData.backgroundImage}')`; 
+            } 
 
-            navigationHistory = [appData.notebooks];[cite: 1]
-            renderGrid();[cite: 1]
+            navigationHistory = [appData.notebooks]; 
+            renderGrid(); 
         }
 
         initializeApp();
@@ -516,14 +516,14 @@
         let cloudSyncTimer;
 
         function saveData() {
-            appData.autocompleteWeightsLedger = autocompleteWeightsLedger;[cite: 1]
-            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);[cite: 1]
-            appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus;[cite: 1]
+            appData.autocompleteWeightsLedger = autocompleteWeightsLedger; 
+            appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens); 
+            appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus; 
             
-            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size');[cite: 1]
-            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference;[cite: 1]
+            let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size'); 
+            if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference; 
             
-            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));[cite: 1]
+            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData)); 
 
             clearTimeout(cloudSyncTimer);
             cloudSyncTimer = setTimeout(() => {
