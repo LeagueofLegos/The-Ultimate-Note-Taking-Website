@@ -444,10 +444,9 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        const SUPABASE_URL = "https://wivkakmfvfbucllnovct.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_h4WZFQAnbAXZH7Jxno78Jg_LA_8tm-4";
-        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabase = Supabase.createClient("https://wivkakmfvfbucllnovct.supabase.co", "sb_publishable_h4WZFQAnbAXZH7Jxno78Jg_LA_8tm-4");
 
         let rawData = localStorage.getItem('ultimate_notes_data');
         let activeFilePointer = null; 
