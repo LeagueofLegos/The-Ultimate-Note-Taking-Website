@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Ultimate Note-Taking Website</title>
+    
+    <!-- PWA Installation Assets Inline Registration Blueprint Headers -->
+    <meta name="theme-color" content="#121216">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Ultimate%20Notes%22,%22short_name%22:%22Notes%22,%22theme_color%22:%22%23121216%22,%22background_color%22:%22%23121216%22,%22display%22:%22standalone%22,%22orientation%22:%22any%22,%22start_url%22:%22.%22,%22icons%22:[{%22src%22:%22https://leagueoflegos.github.io/favicon.ico%22,%22sizes%22:%2264x64%22,%22type%22:%22image/x-icon%22}]}加工">
+
     <style>
         :root {
             --bg-color: #121216;
@@ -261,90 +268,73 @@
         .bg-range-input { flex: 1; cursor: pointer; accent-color: var(--accent-color); }
         .bg-label-txt { font-family: monospace; font-size: 12px; color: var(--accent-color); min-width: 45px; text-align: right; }
 
+        .pwa-warning-panel {
+            background-color: #2a1a1a;
+            border: 2px solid #e74c3c;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #fce4e4;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pwa-close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            padding-left: 10px;
+        }
+        .pwa-close-btn:hover { color: #fff; }
+
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            header {
-                flex-direction: column;
-                gap: 12px;
-                align-items: flex-start;
-                padding: 12px;
-            }
-            .controls {
-                width: 100%;
-                gap: 8px;
-            }
-            .btn {
-                flex: 1 1 calc(50% - 8px);
-                padding: 12px 10px;
-                font-size: 13px;
-                text-align: center;
-                display: inline-flex;
-                justify-content: center;
-                align-items: center;
-            }
-            .search-box {
-                max-width: 100%;
-                font-size: 16px;
-            }
-            .grid {
-                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-                gap: 12px;
-                padding: 12px;
-            }
-            .card-container {
-                aspect-ratio: 1 / 1;
-            }
-            .grid-item {
-                padding: 8px;
-            }
-            .icon {
-                font-size: 36px;
-                margin-bottom: 6px;
-            }
-            .item-name {
-                font-size: 13px;
-            }
-            .card-action {
-                width: 28px;
-                height: 28px;
-                font-size: 14px;
-            }
+            body { padding: 10px; }
+            header { flex-direction: column; gap: 12px; align-items: flex-start; padding: 12px; }
+            .controls { width: 100%; gap: 8px; }
+            .btn { flex: 1 1 calc(50% - 8px); padding: 12px 10px; font-size: 13px; text-align: center; display: inline-flex; justify-content: center; align-items: center; }
+            .search-box { max-width: 100%; font-size: 16px; }
+            .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; padding: 12px; }
+            .card-container { aspect-ratio: 1 / 1; }
+            .grid-item { padding: 8px; }
+            .icon { font-size: 36px; margin-bottom: 6px; }
+            .item-name { font-size: 13px; }
+            .card-action { width: 28px; height: 28px; font-size: 14px; }
             .btn-delete { top: 4px; right: 4px; }
             .btn-move { bottom: 4px; left: 4px; top: auto; }
             .btn-rename { bottom: 4px; right: 4px; top: auto; }
             .btn-duplicate { top: 4px; left: 4px; }
-
-            .editor-layout {
-                height: auto;
-                min-height: calc(100vh - 180px);
-            }
-            .workspace-dual-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-            .pane-wrapper {
-                height: 400px;
-            }
-            .editor-pane {
-                font-size: 16px;
-            }
-            .help-content {
-                grid-template-columns: 1fr;
-            }
+            .editor-layout { height: auto; min-height: calc(100vh - 180px); }
+            .workspace-dual-grid { grid-template-columns: 1fr; gap: 15px; }
+            .pane-wrapper { height: 400px; }
+            .editor-pane { font-size: 16px; }
+            .help-content { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
 
+    <!-- Critical Data Cache & Isolation Safety Notice for PWA Execution Modes -->
+    <div class="pwa-warning-panel hidden" id="pwa-device-notice">
+        <span><strong>PWA OFFLINE STORAGE LIFESPAN WARNING:</strong> If accessing this workspace via a mobile device Home Screen (PWA Mode) and you remain completely offline or inactive for more than <strong>7 consecutive days</strong>, iOS/Android background processes may wipe un-synced data caches. Ensure you connect to internet coverage regularly to secure updates directly to the Supabase Cloud.</span>
+        <button class="pwa-close-btn" onclick="dismissPwaNotice()">✖</button>
+    </div>
+
     <div id="browser-view" class="view-section">
         <header>
             <h1>ULTIMATE NOTES</h1>
             <div class="controls">
+                <!-- Global Workspace History Execution Triggers -->
+                <button class="btn btn-utility" id="history-undo-btn" onclick="executeUndoAction()" disabled>↶ Undo</button>
+                <button class="btn btn-utility" id="history-redo-btn" onclick="executeRedoAction()" disabled>↷ Redo</button>
+                <hr style="border:0; border-left:1px solid var(--dustloop-border); height:30px; margin:0 4px; align-self:center;">
+                
                 <button class="btn btn-utility" onclick="exportMetadata()">Export Data</button>
-                <input type="file" id="import-file" style="display: none;" onchange="importMetadata(this)">
-                <button class="btn btn-utility" onclick="document.getElementById('import-file').click()">Import Data</button>
+                <input type="file" id="import-file" style="display: none;" accept=".json,.html" onchange="importMetadata(this)">
+                <button class="btn btn-utility" onclick="document.getElementById('import-file').click()">Import Data File</button>
                 <input type="file" id="bg-upload" style="display: none;" accept="image/*" onchange="uploadBackground(this)">
                 <button class="btn btn-utility" onclick="document.getElementById('bg-upload').click()">🖼️ BG Art</button>
                 
@@ -444,6 +434,9 @@
         </div>
     </div>
 
+    <!-- Script Block containing Initial Baseline Fallback Template Row Injection -->
+    <script id="offline-embedded-data-payload" type="application/json">{}</script>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const SUPABASE_URL = "https://wivkakmfvfbucllnovct.supabase.co";
@@ -454,6 +447,12 @@
         let activeFilePointer = null; 
         let movingItemPointer = null; 
         let movingItemParentArrayRef = null; 
+        let currentUserSession = null;
+
+        // Workspace Undo/Redo Global Linear Stack Buffers
+        let globalUndoHistoryStack = [];
+        let globalRedoHistoryStack = [];
+        let globalHistoryLockActive = false;
 
         const baseFgcWords = [">", ",", "~", "2A", "2B", "2C", "5A", "5B", "5C", "236A", "236B", "236C", "214A", "214B", "214C", "66B", "66C", "iad", "dl.", "(land)", "(delay)"];
         let dynamicallyLearnedTokens = new Set();
@@ -466,31 +465,234 @@
         let autocompleteEngineActiveStatus = true;
 
         let appData = {
-            notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] },
+            notebooks: { id: 'root', name: 'Root', type: 'folder', children: [], created_at: Date.now(), updated_at: Date.now() },
             backgroundImage: ""
         };
 
-        async function initializeApp() {
-            console.log("Checking Supabase for cloud data...");
-            const { data, error } = await sb
-                .from('user_notes')
-                .select('data')
-                .eq('id', 1)
-                .maybeSingle();
+        // --- AUTHENTICATION MODULES ---
+        async function handleUserSignUp() {
+            const email = prompt("Enter your email:");
+            if (!email) return;
+            const password = prompt("Enter a strong password (min 6 chars):");
+            if (!password) return;
 
-            if (data && data.data) {
-                console.log("Loaded notebook state directly from cloud storage.");
-                appData = data.data;
-            } 
-            else if (rawData) {
-                try {
-                    let parsed = JSON.parse(rawData); 
-                    if (parsed && parsed.notebooks) { 
-                        appData = parsed; 
-                    }
-                } catch(e) {
-                    console.error("Local recovery execution fallback error:", e);
+            const { data, error } = await sb.auth.signUp({ email, password });
+            if (error) alert("Sign up failed: " + error.message);
+            else alert("Sign up successful! Please log in.");
+        }
+
+        async function handleUserLogIn() {
+            const email = prompt("Enter email:");
+            if (!email) return;
+            const password = prompt("Enter password:");
+            if (!password) return;
+
+            const { data, error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) alert("Login failed: " + error.message);
+        }
+
+        async function handleUserLogOut() {
+            await sb.auth.signOut();
+            localStorage.removeItem('ultimate_notes_data');
+            location.reload();
+        }
+
+        function updateAuthPanelUI(user) {
+            const headerControls = document.querySelector('header .controls');
+            let authBox = document.getElementById('auth-status-container');
+            
+            if (!authBox) {
+                authBox = document.createElement('div');
+                authBox.id = 'auth-status-container';
+                authBox.style.display = 'inline-flex';
+                authBox.style.gap = '8px';
+                headerControls.insertBefore(authBox, headerControls.firstChild);
+            }
+
+            if (user) {
+                authBox.innerHTML = `
+                    <span style="font-size:12px; color:var(--text-dim); align-self:center;">👤 ${user.email}</span>
+                    <button class="btn btn-utility" style="padding:4px 10px; font-size:12px;" onclick="handleUserLogOut()">Sign Out</button>
+                `;
+            } else {
+                authBox.innerHTML = `
+                    <button class="btn btn-main" style="padding:4px 10px; font-size:12px;" onclick="handleUserLogIn()">Log In</button>
+                    <button class="btn btn-utility" style="padding:4px 10px; font-size:12px;" onclick="handleUserSignUp()">Sign Up</button>
+                `;
+            }
+        }
+
+        sb.auth.onAuthStateChange((event, session) => {
+            currentUserSession = session ? session.user : null;
+            updateAuthPanelUI(currentUserSession);
+            if (event === 'SIGNED_IN') {
+                initializeApp();
+            }
+        });
+
+        // --- GLOBAL HISTORY ENGINE MANAGEMENT ---
+        function pushGlobalStateSnapshot() {
+            if (globalHistoryLockActive) return;
+            
+            // Deep clone full configuration object block states
+            const snapshotContainer = JSON.stringify({
+                appData: appData,
+                autocompleteWeightsLedger: autocompleteWeightsLedger,
+                autocompleteEngineActiveStatus: autocompleteEngineActiveStatus
+            });
+            
+            globalUndoHistoryStack.push(snapshotContainer);
+            globalRedoHistoryStack = []; // Clear redos on fresh interaction sequences
+            updateHistoryControlButtonsState();
+        }
+
+        function executeUndoAction() {
+            if (globalUndoHistoryStack.length === 0) return;
+            
+            const currentLiveState = JSON.stringify({
+                appData: appData,
+                autocompleteWeightsLedger: autocompleteWeightsLedger,
+                autocompleteEngineActiveStatus: autocompleteEngineActiveStatus
+            });
+            globalRedoHistoryStack.push(currentLiveState);
+
+            const rolledBackSnapshot = JSON.parse(globalUndoHistoryStack.pop());
+            applyHistorySnapshotState(rolledBackSnapshot);
+        }
+
+        function executeRedoAction() {
+            if (globalRedoHistoryStack.length === 0) return;
+
+            const currentLiveState = JSON.stringify({
+                appData: appData,
+                autocompleteWeightsLedger: autocompleteWeightsLedger,
+                autocompleteEngineActiveStatus: autocompleteEngineActiveStatus
+            });
+            globalUndoHistoryStack.push(currentLiveState);
+
+            const recoveredSnapshot = JSON.parse(globalRedoHistoryStack.pop());
+            applyHistorySnapshotState(recoveredSnapshot);
+        }
+
+        function applyHistorySnapshotState(snapshot) {
+            globalHistoryLockActive = true; // Avoid cascading cyclic history mutations
+            
+            appData = snapshot.appData;
+            autocompleteWeightsLedger = snapshot.autocompleteWeightsLedger;
+            autocompleteEngineActiveStatus = snapshot.autocompleteEngineActiveStatus;
+
+            // Immediately flush settings to cache mappings
+            localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
+            
+            // Synchronize active layout visuals
+            if (appData.backgroundImage) {
+                document.body.style.backgroundImage = `url('${appData.backgroundImage}')`;
+            } else {
+                document.body.style.backgroundImage = 'none';
+            }
+            
+            if (appData.savedWallpaperSizeOverride) {
+                document.documentElement.style.setProperty('--user-bg-size', appData.savedWallpaperSizeOverride);
+            } else {
+                document.documentElement.style.removeProperty('--user-bg-size');
+            }
+
+            updateAutocompleteToggleButtonView();
+            
+            // Re-anchor active directory index visibility references
+            let foundCurrentFolderNode = findNodeInTreeById(appData.notebooks, getCurrentFolder().id);
+            if (!foundCurrentFolderNode) {
+                navigationHistory = [appData.notebooks];
+            } else {
+                // Refresh folder references down the stack trace map
+                navigationHistory = navigationHistory.map(folder => findNodeInTreeById(appData.notebooks, folder.id) || folder);
+            }
+
+            renderGrid();
+            updateHistoryControlButtonsState();
+            
+            // Queue sync pipeline to Supabase database clusters
+            clearTimeout(cloudSyncTimer);
+            cloudSyncTimer = setTimeout(() => { syncToCloud(); }, 2500);
+
+            globalHistoryLockActive = false;
+        }
+
+        function updateHistoryControlButtonsState() {
+            document.getElementById('history-undo-btn').disabled = (globalUndoHistoryStack.length === 0);
+            document.getElementById('history-redo-btn').disabled = (globalRedoHistoryStack.length === 0);
+        }
+
+        function findNodeInTreeById(rootItem, targetId) {
+            if (rootItem.id === targetId) return rootItem;
+            if (rootItem.children) {
+                for (let child of rootItem.children) {
+                    let result = findNodeInTreeById(child, targetId);
+                    if (result) return result;
                 }
+            }
+            return null;
+        }
+
+        // --- WARNING NOTICES CONTROLS ---
+        function dismissPwaNotice() {
+            appData.pwaNoticeDismissed = true;
+            document.getElementById('pwa-device-notice').classList.add('hidden');
+            saveData();
+        }
+
+        async function initializeApp() {
+            let embeddedPayload = {};
+            try {
+                const payloadElement = document.getElementById('offline-embedded-data-payload');
+                if (payloadElement && payloadElement.textContent.trim() !== "{}") {
+                    embeddedPayload = JSON.parse(payloadElement.textContent);
+                }
+            } catch (ex) {
+                console.error("Offline payload parsing error:", ex);
+            }
+
+            if (embeddedPayload && embeddedPayload.notebooks) {
+                console.log("Running fully loaded internal offline file structure state.");
+                appData = embeddedPayload;
+                // Exporters get warning visibility reset on unique load loops
+                delete appData.pwaNoticeDismissed;
+            } else {
+                const { data: { user } } = await sb.auth.getUser();
+                currentUserSession = user;
+                updateAuthPanelUI(currentUserSession);
+
+                if (currentUserSession) {
+                    console.log(`Checking cloud data for User: ${currentUserSession.id}`);
+                    const { data, error } = await sb
+                        .from('user_notes')
+                        .select('data')
+                        .eq('user_id', currentUserSession.id)
+                        .maybeSingle();
+
+                    if (data && data.data) {
+                        console.log("Loaded isolated notebook state from cloud storage.");
+                        appData = data.data;
+                    } else {
+                        appData = { notebooks: { id: 'root', name: 'Root', type: 'folder', children: [], created_at: Date.now(), updated_at: Date.now() }, backgroundImage: "" };
+                        await syncToCloud(); 
+                    }
+                } else if (rawData) {
+                    try {
+                        let parsed = JSON.parse(rawData); 
+                        if (parsed && parsed.notebooks) { appData = parsed; }
+                    } catch(e) {
+                        console.error("Local recovery execution fallback error:", e);
+                    }
+                }
+            }
+
+            if (!appData.notebooks.created_at) appData.notebooks.created_at = Date.now();
+            if (!appData.notebooks.updated_at) appData.notebooks.updated_at = Date.now();
+
+            // Evaluate warning card visibility criteria rules
+            if (!appData.pwaNoticeDismissed) {
+                document.getElementById('pwa-device-notice').classList.remove('hidden');
             }
 
             if (appData.autocompleteWeightsLedger) autocompleteWeightsLedger = appData.autocompleteWeightsLedger; 
@@ -508,11 +710,12 @@
             } 
 
             navigationHistory = [appData.notebooks]; 
-            renderGrid(); 
+            renderGrid();
+            updateHistoryControlButtonsState();
         }
 
         initializeApp();
-        
+
         let cloudSyncTimer;
 
         function saveData() {
@@ -532,25 +735,25 @@
         }
 
         async function syncToCloud() {
-            console.log("Auto-syncing to cloud database...");
-            
-            const { data: cloudResponse, error } = await sb
-                .from('user_notes')
-                .upsert({ id: 1, data: appData });
-
-            if (error) {
-                console.error("Cloud sync failed:", error.message);
-            } else {
-                console.log("Cloud sync complete.");
+            if (!currentUserSession) {
+                console.log("Local changes saved. Sign in to leverage cloud sync.");
+                return;
             }
+            
+            console.log("Auto-syncing data block to personal cloud storage...");
+            const { error } = await sb
+                .from('user_notes')
+                .upsert(
+                    { user_id: currentUserSession.id, data: appData },
+                    { onConflict: 'user_id' }
+                );
+
+            if (error) console.error("Cloud sync failed:", error.message);
+            else console.log("Cloud sync complete.");
         }
 
         let navigationHistory = [appData.notebooks];
 
-        /**
-         * Renders the contents of the current folder into the grid layout,
-         * updates breadcrumbs, and adjusts control toolbar states.
-         */
         function renderGrid() {
             const currentFolder = getCurrentFolder();
             const gridContainer = document.getElementById('folder-grid');
@@ -558,18 +761,15 @@
 
             gridContainer.innerHTML = '';
 
-            // 1. Render Toolbar Control Button Visibilities
             const isRoot = currentFolder.id === 'root';
             document.getElementById('btn-file').style.display = isRoot ? 'none' : 'inline-block';
             document.getElementById('btn-link-card').style.display = isRoot ? 'none' : 'inline-block';
 
-            // Toggle Paste Button based on active moving item presence
             const pasteBtn = document.getElementById('btn-paste');
             if (pasteBtn) {
                 pasteBtn.style.display = movingItemPointer ? 'inline-block' : 'none';
             }
 
-            // 2. Render Breadcrumbs Navigation Path Links
             const breadcrumbsContainer = document.getElementById('breadcrumbs');
             if (breadcrumbsContainer) {
                 breadcrumbsContainer.innerHTML = '';
@@ -589,13 +789,11 @@
                 });
             }
 
-            // 3. Render Child Items inside Current Active Workspace View Folder Grid
             if (currentFolder.children && currentFolder.children.length > 0) {
                 currentFolder.children.forEach(item => {
                     const container = document.createElement('div');
                     container.className = 'card-container';
 
-                    // Item Action Trigger Button Nodes
                     const btnDel = document.createElement('button');
                     btnDel.className = 'card-action btn-delete';
                     btnDel.textContent = '✖';
@@ -620,7 +818,6 @@
                     btnMov.title = 'Move Item';
                     btnMov.onclick = (e) => startMoveItem(item, e);
 
-                    // Core Clickable Grid Item Content Card Panel Wrapper - Switched to 'button' for Extension/Vim Clickability
                     const card = document.createElement('button');
                     card.className = `grid-item ${movingItemPointer && movingItemPointer.id === item.id ? 'moving' : ''}`;
                     
@@ -634,7 +831,6 @@
                         <div class="item-name" title="${item.name}">${item.name}</div>
                     `;
 
-                    // Setup card navigation execution behaviors
                     card.onclick = () => {
                         if (item.type === 'folder') {
                             enterFolder(item);
@@ -645,7 +841,6 @@
                         }
                     };
 
-                    // Assemble Component Cards Structural Layout Output Tree elements Hierarchy
                     container.appendChild(btnDel);
                     container.appendChild(btnRen);
                     container.appendChild(btnDup);
@@ -658,18 +853,12 @@
             }
         }
 
-        /**
-         * Pushes the target folder into navigationHistory array pointer stack and repopulates grid data maps layout screen fields.
-         */
         function enterFolder(folder) {
             if (!folder || folder.type !== 'folder') return;
             navigationHistory.push(folder);
             renderGrid();
         }
 
-        /**
-         * Packages full reactive operational dynamic engine configuration application state context dataset parameters ledger matrix database objects blocks directly into standard locally extractable downloadable disk blob storage asset files.
-         */
         function exportMetadata() {
             try {
                 appData.autocompleteWeightsLedger = autocompleteWeightsLedger;
@@ -679,12 +868,20 @@
                 let activeStylePreference = document.documentElement.style.getPropertyValue('--user-bg-size');
                 if (activeStylePreference) appData.savedWallpaperSizeOverride = activeStylePreference;
 
-                const dataPayloadStringStringify = JSON.stringify(appData, null, 2);
-                const dataJsonBlobBinaryAssetStreamRef = new Blob([dataPayloadStringStringify], { type: 'application/json' });
-                
+                // Stripping flag prior to packaging so export targets display notice again on init
+                const dataToBundle = JSON.parse(JSON.stringify(appData));
+                delete dataToBundle.pwaNoticeDismissed;
+
+                const stringifiedState = JSON.stringify(dataToBundle);
+                const fullSourceDocument = document.documentElement.outerHTML;
+
+                const stateRegexPattern = /<script id="offline-embedded-data-payload" type="application\/json">([\s\S]*?)<\/script>/i;
+                const dynamicCompiledApplicationOutput = fullSourceDocument.replace(stateRegexPattern, `<script id="offline-embedded-data-payload" type="application/json">${stringifiedState}<\/script>`);
+
+                const rawExecutableBinaryBlobRef = new Blob([dynamicCompiledApplicationOutput], { type: 'text/html' });
                 const virtualDocumentAnchorDownloadTriggerElementNode = document.createElement('a');
-                virtualDocumentAnchorDownloadTriggerElementNode.href = URL.createObjectURL(dataJsonBlobBinaryAssetStreamRef);
-                virtualDocumentAnchorDownloadTriggerElementNode.download = `ultimate_notes_backup_${Date.now()}.json`;
+                virtualDocumentAnchorDownloadTriggerElementNode.href = URL.createObjectURL(rawExecutableBinaryBlobRef);
+                virtualDocumentAnchorDownloadTriggerElementNode.download = `ultimate_notes_executable_workspace_${Date.now()}.html`;
                 
                 document.body.appendChild(virtualDocumentAnchorDownloadTriggerElementNode);
                 virtualDocumentAnchorDownloadTriggerElementNode.click();
@@ -695,14 +892,14 @@
             }
         }
 
-        /**
-         * Recursively parses external backup configuration tree objects tracking node keys to deeply stitch missing note nodes assets elements maps structures without breaking operational client pointers runtime scopes elements layout tracking indices properties boundaries.
-         */
         function deepMergeNoteTrees(targetFolder, sourceFolder) {
             if (!sourceFolder || !sourceFolder.children) return;
             if (!targetFolder.children) targetFolder.children = [];
 
             sourceFolder.children.forEach(sourceItem => {
+                if (!sourceItem.created_at) sourceItem.created_at = Date.now();
+                if (!sourceItem.updated_at) sourceItem.updated_at = Date.now();
+
                 let matchingTargetItem = targetFolder.children.find(targetItem => {
                     return targetItem.id === sourceItem.id || (targetItem.name === sourceItem.name && targetItem.type === sourceItem.type);
                 });
@@ -710,15 +907,33 @@
                 if (matchingTargetItem) {
                     if (sourceItem.type === 'folder') {
                         deepMergeNoteTrees(matchingTargetItem, sourceItem);
+                    } else {
+                        const targetTime = matchingTargetItem.updated_at || 0;
+                        if (sourceItem.updated_at > targetTime) {
+                            console.log(`Reconciling node override: "${matchingTargetItem.name}" -> Updated via newer timestamp match.`);
+                            matchingTargetItem.name = sourceItem.name;
+                            matchingTargetItem.updated_at = sourceItem.updated_at;
+                            if (sourceItem.type === 'file') {
+                                matchingTargetItem.content = sourceItem.content;
+                                matchingTargetItem.canvasMatrix = sourceItem.canvasMatrix || {};
+                                matchingTargetItem.gridRowsCount = sourceItem.gridRowsCount || 4;
+                                matchingTargetItem.gridColsCount = sourceItem.gridColsCount || 4;
+                                matchingTargetItem.editorMode = sourceItem.editorMode || 'text';
+                            } else if (sourceItem.type === 'link') {
+                                matchingTargetItem.url = sourceItem.url;
+                            }
+                        }
                     }
                 } else {
                     const clonedNewNodeAsset = JSON.parse(JSON.stringify(sourceItem));
                     targetFolder.children.push(clonedNewNodeAsset);
                 }
             });
+            targetFolder.updated_at = Date.now();
         }
 
         function executeManualBackgroundArtResizeAction(sliderPercentageValue) {
+            pushGlobalStateSnapshot(); // Capture scaling transformations
             const displayLabel = document.getElementById('bg-size-label-display');
             if (displayLabel) displayLabel.textContent = sliderPercentageValue + "%";
 
@@ -733,6 +948,7 @@
         }
 
         function resetBackgroundScalingPreference() {
+            pushGlobalStateSnapshot();
             document.documentElement.style.removeProperty('--user-bg-size');
             const slider = document.getElementById('bg-size-scaler-track');
             const displayLabel = document.getElementById('bg-size-label-display');
@@ -750,10 +966,6 @@
             }
         };
 
-        function getCurrentFolder() {
-            return navigationHistory[navigationHistory.length - 1];
-        }
-
         function createNewItem(type) {
             const currentFolder = getCurrentFolder();
             let promptMsg = "Enter name:";
@@ -764,7 +976,16 @@
             const name = prompt(promptMsg);
             if (!name || name.trim() === "") return;
 
-            const newItem = { id: type + '_' + Date.now(), name: name.trim(), type: type };
+            pushGlobalStateSnapshot(); // Capture item addition sequences
+
+            const currentTimeStampTag = Date.now();
+            const newItem = { 
+                id: type + '_' + currentTimeStampTag, 
+                name: name.trim(), 
+                type: type,
+                created_at: currentTimeStampTag,
+                updated_at: currentTimeStampTag
+            };
 
             if (type === 'folder') {
                 newItem.children = [];
@@ -782,6 +1003,7 @@
 
             if (!currentFolder.children) currentFolder.children = [];
             currentFolder.children.push(newItem);
+            currentFolder.updated_at = currentTimeStampTag;
             saveData();
             renderGrid();
         }
@@ -789,8 +1011,12 @@
         function deleteItem(itemId, event) {
             event.stopPropagation(); 
             if (!confirm("Are you sure you want to delete this item?")) return;
+            
+            pushGlobalStateSnapshot(); // Capture element deletion sequences
+            
             const currentFolder = getCurrentFolder();
             currentFolder.children = currentFolder.children.filter(item => item.id !== itemId);
+            currentFolder.updated_at = Date.now();
             if (movingItemPointer && movingItemPointer.id === itemId) cancelMove();
             saveData();
             renderGrid();
@@ -802,27 +1028,37 @@
             const targetName = prompt(`Modify descriptor text for "${currentName}":`, currentName);
             if (!targetName || targetName.trim() === "" || targetName.trim() === currentName) return;
 
+            pushGlobalStateSnapshot(); // Capture rename modification steps
+
             item.name = targetName.trim();
+            item.updated_at = Date.now();
             if (item.type === 'file' && item.content.startsWith(`# ${currentName}`)) {
                 item.content = item.content.replace(`# ${currentName}`, `# ${item.name}`);
             }
+            getCurrentFolder().updated_at = Date.now();
             saveData();
             renderGrid();
         }
 
         function duplicateItem(item, event) {
             event.stopPropagation();
+            pushGlobalStateSnapshot(); // Capture asset cloning workflows
+            
             const currentFolder = getCurrentFolder();
             let clonedItem = JSON.parse(JSON.stringify(item));
+            const rightNow = Date.now();
             
-            clonedItem.id = item.type + '_' + Date.now();
+            clonedItem.id = item.type + '_' + rightNow;
             clonedItem.name = `${item.name} - Copy`;
+            clonedItem.created_at = rightNow;
+            clonedItem.updated_at = rightNow;
             
             if (clonedItem.type === 'file' && clonedItem.content.startsWith(`# ${item.name}`)) {
                 clonedItem.content = clonedItem.content.replace(`# ${item.name}`, `# ${clonedItem.name}`);
             }
             
             currentFolder.children.push(clonedItem);
+            currentFolder.updated_at = rightNow;
             saveData();
             renderGrid();
         }
@@ -842,10 +1078,17 @@
                 cancelMove();
                 return;
             }
+            
+            pushGlobalStateSnapshot(); // Capture clipboard relational structural swaps
+            
             const index = movingItemParentArrayRef.indexOf(movingItemPointer);
             if (index > -1) movingItemParentArrayRef.splice(index, 1);
             if (!targetFolder.children) targetFolder.children = [];
+            
+            movingItemPointer.updated_at = Date.now();
             targetFolder.children.push(movingItemPointer);
+            targetFolder.updated_at = Date.now();
+            
             movingItemPointer = null;
             movingItemParentArrayRef = null;
             saveData();
@@ -889,8 +1132,13 @@
 
         function closeEditor() {
             if (activeFilePointer) {
-                activeFilePointer.content = document.getElementById('markdown-input').value;
-                saveData();
+                // Check if text was modified inside text editor node frame boundaries
+                if (document.getElementById('markdown-input').value !== activeFilePointer.content) {
+                    pushGlobalStateSnapshot(); // Lock text adjustments inside snapshot logs
+                    activeFilePointer.content = document.getElementById('markdown-input').value;
+                    activeFilePointer.updated_at = Date.now();
+                    saveData();
+                }
             }
             activeFilePointer = null;
             document.getElementById('editor-view').classList.add('hidden');
@@ -938,8 +1186,14 @@
                     cellInput.value = cellValue;
                     cellInput.placeholder = '...';
                     
+                    cellInput.onchange = () => {
+                        // Capture snapshot specifically when user commits focus away from cells matrix targets
+                        pushGlobalStateSnapshot();
+                    };
+                    
                     cellInput.oninput = (e) => {
                         activeFilePointer.canvasMatrix[cellKey] = e.target.value;
+                        activeFilePointer.updated_at = Date.now();
                         saveData();
                         updateLivePreviewFromActiveFocusCell(e.target.value);
                     };
@@ -956,8 +1210,10 @@
 
         function expandInfiniteCanvasDimension(dimension) {
             if (!activeFilePointer) return;
+            pushGlobalStateSnapshot(); // Store canvas matrix boundary extensions
             if (dimension === 'row') activeFilePointer.gridRowsCount++;
             if (dimension === 'col') activeFilePointer.gridColsCount++;
+            activeFilePointer.updated_at = Date.now();
             saveData();
             buildInfiniteGridCanvasMatrixHTML();
         }
@@ -968,6 +1224,7 @@
                 if (activeFilePointer.gridRowsCount <= 1) return;
                 const targetRowIdx = activeFilePointer.gridRowsCount - 1;
                 if (!confirm(`Delete Row ${targetRowIdx + 1}? Cells inside will be lost.`)) return;
+                pushGlobalStateSnapshot();
                 for (let c = 0; c < activeFilePointer.gridColsCount; c++) { delete activeFilePointer.canvasMatrix[`${targetRowIdx}_${c}`]; }
                 activeFilePointer.gridRowsCount--;
             }
@@ -975,9 +1232,11 @@
                 if (activeFilePointer.gridColsCount <= 1) return;
                 const targetColIdx = activeFilePointer.gridColsCount - 1;
                 if (!confirm(`Delete Column ${targetColIdx + 1}? Cells inside will be lost.`)) return;
+                pushGlobalStateSnapshot();
                 for (let r = 0; r < activeFilePointer.gridRowsCount; r++) { delete activeFilePointer.canvasMatrix[`${r}_${targetColIdx}`]; }
                 activeFilePointer.gridColsCount--;
             }
+            activeFilePointer.updated_at = Date.now();
             saveData();
             buildInfiniteGridCanvasMatrixHTML();
             document.getElementById('markdown-preview').innerHTML = ''; 
@@ -1085,6 +1344,8 @@
             const textWord = inputField.value.trim();
             if (!textWord) return;
 
+            pushGlobalStateSnapshot(); // Capture vocab injection traces
+
             dynamicallyLearnedTokens.add(textWord);
             autocompleteWeightsLedger[textWord] = (autocompleteWeightsLedger[textWord] || 0) + 5;
             
@@ -1117,7 +1378,6 @@
 
         function handleEditorInput(event) {
             updateLivePreview();
-            
             if (!autocompleteEngineActiveStatus) return;
 
             const editor = event.target;
@@ -1126,7 +1386,6 @@
             const box = document.getElementById('autocomplete-box');
 
             parseContextVocabulariesFromActiveFile(val);
-
             if (cursor === 0) { box.style.display = 'none'; return; }
 
             const charBeforeCursor = val.substring(cursor - 1, cursor);
@@ -1165,7 +1424,6 @@
             });
 
             currentSuggestionsMapping = matchDataset.slice(0, 3);
-
             box.innerHTML = '';
             activeSuggestionIndex = 0;
             
@@ -1184,7 +1442,6 @@
 
         function handleEditorKeydowns(event) {
             const box = document.getElementById('autocomplete-box');
-            
             if (event.key === 'Tab') {
                 if (box.style.display === 'block') {
                     event.preventDefault();
@@ -1199,7 +1456,6 @@
 
             if (box.style.display === 'block') {
                 const items = box.getElementsByClassName('suggestion-item');
-                
                 if (event.key === 'ArrowDown') {
                     event.preventDefault(); 
                     if (items[activeSuggestionIndex]) items[activeSuggestionIndex].classList.remove('active');
@@ -1297,6 +1553,7 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
+                    pushGlobalStateSnapshot(); // Store custom theme changes in rollback buffer logs
                     appData.backgroundImage = e.target.result;
                     document.body.style.backgroundImage = `url('${e.target.result}')`;
                     saveData();
@@ -1310,37 +1567,106 @@
             const r = new FileReader();
             r.onload = function(e) {
                 try {
-                    const parsed = JSON.parse(e.target.result);
-                    if (parsed && parsed.notebooks) {
-                        deepMergeNoteTrees(appData.notebooks, parsed.notebooks);
-                        if (parsed.autocompleteWeightsLedger) {
-                            for (let token in parsed.autocompleteWeightsLedger) {
-                                autocompleteWeightsLedger[token] = (autocompleteWeightsLedger[token] || 0) + parsed.autocompleteWeightsLedger[token];
-                            }
+                    let textContentDataString = e.target.result;
+                    let parsed = null;
+
+                    if (file.name.endsWith('.html') || textContentDataString.trim().startsWith('<!DOCTYPE html>')) {
+                        const parsingDomWindowRef = new DOMParser().parseFromString(textContentDataString, 'text/html');
+                        const dataScriptNodeTag = parsingDomWindowRef.getElementById('offline-embedded-data-payload');
+                        if (dataScriptNodeTag) {
+                            parsed = JSON.parse(dataScriptNodeTag.textContent);
                         }
+                    } else {
+                        parsed = JSON.parse(textContentDataString);
+                    }
+
+                    if (parsed && parsed.notebooks) {
+                        const shouldMerge = confirm(
+                            "An external notebook backup stream has been processed.\n\n" +
+                            "[OK] -> Merge modifications via item-by-item timestamp calculation.\n" +
+                            "[Cancel] -> Overwrite and clear all current structures with this backup."
+                        );
+
+                        pushGlobalStateSnapshot(); // Allow user to undo complete file database imports
+
+                        if (shouldMerge) {
+                            deepMergeNoteTrees(appData.notebooks, parsed.notebooks);
+                            if (parsed.autocompleteWeightsLedger) {
+                                for (let token in parsed.autocompleteWeightsLedger) {
+                                    autocompleteWeightsLedger[token] = (autocompleteWeightsLedger[token] || 0) + parsed.autocompleteWeightsLedger[token];
+                                }
+                            }
+                            if (!appData.backgroundImage && parsed.backgroundImage) {
+                                appData.backgroundImage = parsed.backgroundImage;
+                                document.body.style.backgroundImage = `url('${parsed.backgroundImage}')`;
+                            }
+                            alert("Notebook merge complete! Newer edits successfully resolved.");
+                        } else {
+                            appData = parsed;
+                            if (parsed.autocompleteWeightsLedger) autocompleteWeightsLedger = parsed.autocompleteWeightsLedger;
+                            if (parsed.backgroundImage) {
+                                document.body.style.backgroundImage = `url('${parsed.backgroundImage}')`;
+                            } else {
+                                document.body.style.backgroundImage = 'none';
+                            }
+                            alert("Database successfully replaced with imported file.");
+                        }
+
+                        // Evaluate notice panel context criteria rules again post-import action
+                        if (appData.pwaNoticeDismissed) {
+                            document.getElementById('pwa-device-notice').classList.add('hidden');
+                        } else {
+                            document.getElementById('pwa-device-notice').classList.remove('hidden');
+                        }
+
                         if (parsed.hasOwnProperty('autocompleteEngineActiveStatus')) {
                             autocompleteEngineActiveStatus = parsed.autocompleteEngineActiveStatus;
                         }
                         if (parsed.savedWallpaperSizeOverride) {
                             document.documentElement.style.setProperty('--user-bg-size', parsed.savedWallpaperSizeOverride);
                         }
-                        if (!appData.backgroundImage && parsed.backgroundImage) {
-                            appData.backgroundImage = parsed.backgroundImage;
-                            document.body.style.backgroundImage = `url('${parsed.backgroundImage}')`;
-                        }
+
                         navigationHistory = [appData.notebooks];
                         cancelMove(); 
                         saveData(); 
                         renderGrid();
-                        alert("Note database reconciliation and merge complete! Duplicate items skipped.");
                     } else {
-                        alert("Invalid backup structure format.");
+                        alert("Invalid file format. Ensure this is a valid backup JSON or HTML note file.");
                     }
                 } catch (err) { 
-                    alert("Error processing JSON data."); 
+                    alert("Error parsing notebook bundle data."); 
                 }
             };
             r.readAsText(file); input.value = '';
+        }
+    </script>
+
+    <!-- Inline Progressive Web Application Service Worker Registration Block -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const serviceWorkerCodeString = `
+                    const CACHE_NAME = 'ultimate-notes-v1';
+                    const ASSETS = [
+                        './',
+                        'index.html',
+                        'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+                    ];
+                    self.addEventListener('install', e => {
+                        e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+                    });
+                    self.addEventListener('activate', e => {
+                        e.waitUntil(caches.keys().then(keys => Promise.all(keys.map(k => k !== CACHE_NAME && caches.delete(k)))).then(() => self.clients.claim()));
+                    });
+                    self.addEventListener('fetch', e => {
+                        e.respondWith(caches.match(e.request).then(res => res || fetch(e.request).catch(() => caches.match('index.html'))));
+                    });
+                `;
+                const workerBlob = new Blob([serviceWorkerCodeString], { type: 'application/javascript' });
+                navigator.serviceWorker.register(URL.createObjectURL(workerBlob))
+                    .then(() => console.log("PWA service worker initialized successfully."))
+                    .catch(err => console.warn("Service worker registration bypassed:", err));
+            });
         }
     </script>
 
