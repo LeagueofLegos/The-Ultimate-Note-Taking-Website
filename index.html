@@ -451,9 +451,6 @@
         const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let rawData = localStorage.getItem('ultimate_notes_data');
-        let activeFilePointer = null; 
-        let movingItemPointer = null; 
-        let movingItemParentArrayRef = null; 
 
         const baseFgcWords = [">", ",", "~", "2A", "2B", "2C", "5A", "5B", "5C", "236A", "236B", "236C", "214A", "214B", "214C", "66B", "66C", "iad", "dl.", "(land)", "(delay)"];
         let dynamicallyLearnedTokens = new Set();
@@ -464,11 +461,6 @@
 
         let autocompleteWeightsLedger = {};
         let autocompleteEngineActiveStatus = true;
-
-        let appData = {
-            notebooks: { id: 'root', name: 'Root', type: 'folder', children: [] },
-            backgroundImage: ""
-        };
 
         async function initializeApp() {
             console.log("Checking Supabase for cloud data...");
