@@ -1226,7 +1226,9 @@
             };
             reader.readAsText(file);
         }
-
+        
+        const finalWord = words[words.length - 1]?.replace(/[\[\]#\-.,!?;:]/g, '').trim();
+        
         // --- EDITOR TEXT AREA HOOK INTERFACES ---
         function handleEditorInput(event) {
             const val = event.target.value;
@@ -1242,7 +1244,6 @@
             if (event.inputType === "insertText" && val[cursor - 1] === " ") {
                 const writtenText = val.slice(0, cursor - 1);
                 const words = writtenText.split(/[\s\n]+/);
-                const finalWord = words[words.length - 1]?.replace(/[\[\]#\-.,!?;:]/g, '').trim();
                 
                 if (finalWord && finalWord.length > 0) {
                     const pooledTokenList = Array.from(new Set([...baseFgcWords, ...dynamicallyLearnedTokens]));
