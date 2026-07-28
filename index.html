@@ -1227,13 +1227,17 @@
             reader.readAsText(file);
         }
         
-        const finalWord = words[words.length - 1]?.replace(/[\[\]#\-.,!?;:]/g, '').trim();
+        
+        
         
         // --- EDITOR TEXT AREA HOOK INTERFACES ---
         function handleEditorInput(event) {
-            const val = event.target.value;
             const cursor = event.target.selectionStart;
-            
+            const val = event.target.value;
+            const writtenText = val.slice(0, cursor - 1);
+            const words = writtenText.split(/[\s\n]+/);
+            const finalWord = words[words.length - 1]?.replace(/[\[\]#\-.,!?;:]/g, '').trim();
+
             if (activeFilePointer) {
                 activeFilePointer.content = val;
             }
@@ -1242,8 +1246,6 @@
 
             // Prevent prompt injection triggers during history undo states or backspaces
             if (event.inputType === "insertText" && val[cursor - 1] === " ") {
-                const writtenText = val.slice(0, cursor - 1);
-                const words = writtenText.split(/[\s\n]+/);
                 
                 if (finalWord && finalWord.length > 0) {
                     const pooledTokenList = Array.from(new Set([...baseFgcWords, ...dynamicallyLearnedTokens]));
@@ -1256,6 +1258,22 @@
                             }
                         }, 200);
                     }
+                }
+            }
+
+            // Updated handleEditorInput conditional logic injection configuration mapping
+            /* Nearest neighboring function: handleEditorInput */
+            // Update the confirmation step within handleEditorInput to read:
+            if (autoDictAppendEngineActive && finalWord && finalWord.length > 0) {
+                const pooledTokenList = Array.from(new Set([...baseFgcWords, ...dynamicallyLearnedTokens]));
+                const matchesWord = pooledTokenList.some(w => w.toLowerCase() === finalWord.toLowerCase());
+                if (!matchesWord) {
+                    setTimeout(() => {
+                        if (confirm(`Add custom token variant reference "${finalWord}" into the Autocomplete dictionary?`)) {
+                            dynamicallyLearnedTokens.add(finalWord);
+                            saveData();
+                        }
+                    }, 200);
                 }
             }
         }
@@ -1322,22 +1340,6 @@
                 btn.textContent = "Auto-Add To Dictionary: OFF";
                 btn.style.background = "#e74c3c";
                 btn.style.borderColor = "#e74c3c";
-            }
-        }
-
-        // Updated handleEditorInput conditional logic injection configuration mapping
-        /* Nearest neighboring function: handleEditorInput */
-        // Update the confirmation step within handleEditorInput to read:
-        if (autoDictAppendEngineActive && finalWord && finalWord.length > 0) {
-            const pooledTokenList = Array.from(new Set([...baseFgcWords, ...dynamicallyLearnedTokens]));
-            const matchesWord = pooledTokenList.some(w => w.toLowerCase() === finalWord.toLowerCase());
-            if (!matchesWord) {
-                setTimeout(() => {
-                    if (confirm(`Add custom token variant reference "${finalWord}" into the Autocomplete dictionary?`)) {
-                        dynamicallyLearnedTokens.add(finalWord);
-                        saveData();
-                    }
-                }, 200);
             }
         }
 
