@@ -649,6 +649,7 @@
             else alert("Verification link successfully sent. Please check your inbox.");
         }
 
+
         async function configureOptionalAccount2FA() {
             if (!currentUserSession) {
                 alert("Authentication required before configuring multi-factor enrollment.");
@@ -676,49 +677,30 @@
                     modal.style.alignItems = 'center';
                     modal.style.justifyContent = 'center';
                     
+                    const qrSrc = data.totp.qr_code.startsWith('data:') 
+                        ? data.totp.qr_code 
+                        : `data:image/svg+xml;utf8,${encodeURIComponent(data.totp.qr_code)}`;
+
                     modal.innerHTML = `
-                        <div style="background:var(--panel-color); border:2px solid var(--accent-color); padding:30px; border-radius:8px; width:360px; text-align:center; position:relative; color:var(--text-color); box-shadow:0 10px 30px rgba(0,0,0,0.6); box-sizing:border-box;">
+                        <div style="background:var(--panel-color); border:2px solid var(--accent-color); padding:25px; border-radius:8px; width:450px; text-align:center; position:relative; color:var(--text-color); box-shadow:0 10px 30px rgba(0,0,0,0.6);">
                             <button onclick="document.getElementById('mfa-enrollment-modal-overlay').remove()" style="position:absolute; top:12px; right:12px; background:none; border:none; color:#ff4655; font-size:16px; cursor:pointer;">✖</button>
-                            <h2 style="color:var(--accent-color); margin-top:0; font-size:20px; letter-spacing:0.5px;">🔒 Enable 2FA</h2>
+                            <h2 style="color:var(--accent-color); margin-top:0;">🔒 Setup 2FA Authenticator</h2>
+                            <p style="font-size:13px; color:var(--text-dim); margin-bottom:15px;">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.) or copy the manual entry code.</p>
                             
-                            <div id="mfa-qr-native-holder" style="background:#fff; padding:12px; border-radius:6px; display:inline-block; margin:20px 0; width:200px; height:200px; box-sizing:border-box;">
-                                ${data.totp.qr_code}
+                            <div style="background:#fff; padding:15px; border-radius:6px; display:inline-block; margin-bottom:15px;">
+                                <img src="${qrSrc}" alt="MFA QR Code" style="display:block; width:180px; height:180px;"/>
                             </div>
                             
-                            <input type="text" id="mfa-setup-verification-input" placeholder="Enter 6-digit code" style="width:100%; background:#0c0c0e; border:1px solid var(--dustloop-border); color:#fff; padding:10px; border-radius:4px; margin-bottom:15px; text-align:center; font-size:16px; letter-spacing:2px; box-sizing:border-box; outline:none;">
-                            <button class="btn btn-main" style="width:100%;" id="mfa-activate-btn">Activate 2FA</button>
+                            <div style="background:#0c0c0e; border:1px solid var(--dustloop-border); padding:12px; border-radius:6px; text-align:left; margin-bottom:15px;">
+                                <span style="font-size:11px; color:var(--accent-color); font-weight:bold; display:block; margin-bottom:4px;">MANUAL SETUP CODE:</span>
+                                <code style="font-family:monospace; font-size:13px; color:#fff; word-break:break-all;">${data.totp.secret}</code>
+                            </div>
+                            <button class="btn btn-main" style="width:100%;" onclick="document.getElementById('mfa-enrollment-modal-overlay').remove()">Done</button>
                         </div>
                     `;
                     document.body.appendChild(modal);
-
-                    // Force SVG styling parameters to match the clean container bounds perfectly
-                    const nativeSvg = modal.querySelector('#mfa-qr-native-holder svg');
-                    if (nativeSvg) {
-                        nativeSvg.style.width = '100%';
-                        nativeSvg.style.height = '100%';
-                        nativeSvg.style.display = 'block';
-                    }
-
-                    modal.querySelector('#mfa-activate-btn').onclick = async () => {
-                        const tokenVerifyCode = document.getElementById('mfa-setup-verification-input').value.trim();
-                        if (!tokenVerifyCode) return alert("Please type your verification code.");
-                        
-                        try {
-                            const { data: challengeData, error: challengeError } = await sb.auth.mfa.challenge({ factorId: data.id });
-                            if (challengeError) throw challengeError;
-
-                            const { error: verifyError } = await sb.auth.mfa.verify({
-                                challengeId: challengeData.id,
-                                code: tokenVerifyCode
-                            });
-                            if (verifyError) throw verifyError;
-
-                            alert("2FA activated and verified successfully!");
-                            modal.remove();
-                        } catch (err) {
-                            alert("Verification failed: " + err.message);
-                        }
-                    };
+                } else {
+                    alert("MFA Factor enrollment sequence executed.");
                 }
             } catch (err) {
                 alert("2FA Registration processing error: " + err.message);
