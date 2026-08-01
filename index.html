@@ -597,37 +597,23 @@
             if (!password) return;
 
             const { data, error } = await sb.auth.signInWithPassword({ email, password });
-            if (error) {
-                alert("Login failed: " + error.message);
-                return;
-            }
+            if (error) return alert("Login failed: " + error.message);
 
-            try {
-                // Check if the authenticated profile has verified multi-factor enrollments
-                const { data: factorsData, error: factorsError } = await sb.auth.mfa.listFactors();
-                if (!factorsError && factorsData && factorsData.totp && factorsData.totp.length > 0) {
-                    const activeFactor = factorsData.totp[0];
-                    const tokenCode = prompt("Enter your 6-digit 2FA verification code:");
-                    
-                    if (!tokenCode) {
-                        await sb.auth.signOut();
-                        return;
-                    }
+            // Fetch any enrolled and verified active authentication factors
+            const { data: mfa, error: mfaErr } = await sb.auth.mfa.listFactors();
+            const activeFactor = mfa?.all?.find(f => f.status === 'verified');
 
-                    const { data: challengeData, error: challengeError } = await sb.auth.mfa.challenge({ factorId: activeFactor.id });
-                    if (challengeError) throw challengeError;
+            if (!mfaErr && activeFactor) {
+                const tokenCode = prompt("Enter your 6-digit 2FA verification code:");
+                if (!tokenCode) return await sb.auth.signOut();
 
-                    const { error: verifyError } = await sb.auth.mfa.verify({
-                        challengeId: challengeData.id,
-                        code: tokenCode.trim()
-                    });
-                    if (verifyError) throw verifyError;
+                const { data: challenge, error: chErr } = await sb.auth.mfa.challenge({ factorId: activeFactor.id });
+                if (chErr) return alert("Challenge Error: " + chErr.message) && await sb.auth.signOut();
 
-                    alert("2FA Verification Successful!");
-                }
-            } catch (mfaErr) {
-                alert("2FA Authentication Error: " + mfaErr.message);
-                await sb.auth.signOut();
+                const { error: vErr } = await sb.auth.mfa.verify({ challengeId: challenge.id, code: tokenCode.trim() });
+                if (vErr) return alert("Invalid Code: " + vErr.message) && await sb.auth.signOut();
+
+                alert("2FA Verification Successful!");
             }
         }
 
