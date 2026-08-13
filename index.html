@@ -507,7 +507,7 @@
         let globalTokenEndOffset = 0;
 
         let autocompleteWeightsLedger = {};
-        let autocompleteEngineActiveStatus = true;
+        let autocompleteEngineActiveStatus = false;
 
         let appData = {
             notebooks: { id: 'root', name: 'Root', type: 'folder', children: [], created_at: Date.now(), updated_at: Date.now() },
@@ -1407,7 +1407,7 @@
             saveData();
         }
 
-        let autoDictAppendEngineActive = true;
+        let autoDictAppendEngineActive = false;
 
         function toggleAutoDictAppendState() {
             autoDictAppendEngineActive = !autoDictAppendEngineActive;
