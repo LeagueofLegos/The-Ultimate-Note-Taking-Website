@@ -597,24 +597,12 @@
             if (!password) return;
 
             const { data, error } = await sb.auth.signInWithPassword({ email, password });
-            if (error) return alert("Login failed: " + error.message);
-
-            // Fetch any enrolled and verified active authentication factors
-            const { data: mfa, error: mfaErr } = await sb.auth.mfa.listFactors();
-            const activeFactor = mfa?.all?.find(f => f.status === 'verified');
-
-            if (!mfaErr && activeFactor) {
-                const tokenCode = prompt("Enter your 6-digit 2FA verification code:");
-                if (!tokenCode) return await sb.auth.signOut();
-
-                const { data: challenge, error: chErr } = await sb.auth.mfa.challenge({ factorId: activeFactor.id });
-                if (chErr) return alert("Challenge Error: " + chErr.message) && await sb.auth.signOut();
-
-                const { error: vErr } = await sb.auth.mfa.verify({ challengeId: challenge.id, code: tokenCode.trim() });
-                if (vErr) return alert("Invalid Code: " + vErr.message) && await sb.auth.signOut();
-
-                alert("2FA Verification Successful!");
+            if (error) {
+                alert("Login failed: " + error.message);
+                return;
             }
+            // Code execution safely pauses here; the onAuthStateChange intercept container 
+            // handles the subsequent 2FA verification challenge before initializeApp() runs.
         }
 
         async function handleUserLogOut() {
@@ -2261,11 +2249,49 @@
         }
 
         // Unified Session Presence Verification Hook
-        sb.auth.onAuthStateChange((event, session) => {
+        sb.auth.onAuthStateChange(async (event, session) => {
             currentUserSession = session ? session.user : null;
             updateAuthPanelUI(currentUserSession);
+            
             if (event === 'SIGNED_IN') {
-                initializeApp();
+                try {
+                    // Intercept login broadcast to inspect security assurance factor levels
+                    const { data: mfa, error: mfaErr } = await sb.auth.mfa.listFactors();
+                    const activeFactor = mfa?.all?.find(f => f.status === 'verified');
+                    
+                    // If the account has an active verified 2FA factor but the session is only AAL1
+                    if (!mfaErr && activeFactor && session.user.app_metadata.aal !== 'aal2') {
+                        const tokenCode = prompt("Enter your 6-digit 2FA verification code to access your workspace:");
+                        if (!tokenCode) {
+                            await sb.auth.signOut();
+                            return;
+                        }
+
+                        const { data: challenge, error: chErr } = await sb.auth.mfa.challenge({ factorId: activeFactor.id });
+                        if (chErr) {
+                            alert("Challenge Error: " + chErr.message);
+                            await sb.auth.signOut();
+                            return;
+                        }
+
+                        const { error: vErr } = await sb.auth.mfa.verify({ 
+                            challengeId: challenge.id, 
+                            code: tokenCode.trim() 
+                        });
+                        
+                        if (vErr) {
+                            alert("Invalid verification code sequence. Access denied.");
+                            await sb.auth.signOut();
+                            return;
+                        }
+                    }
+                    
+                    // Proceed to boot database structures once assurance requirements match
+                    initializeApp();
+                } catch (err) {
+                    console.error("Auth lifecycle intercept breakdown: ", err);
+                    await sb.auth.signOut();
+                }
             }
         });
 
