@@ -332,6 +332,17 @@
         <button class="pwa-close-btn" onclick="dismissPwaNotice()">✖</button>
     </div>
 
+    <!-- Structural Context: Place immediately before #browser-view -->
+    <div id="internal-tab-bar-container" style="display: flex; align-items: center; gap: 6px; margin-bottom: 12px; background: rgba(21, 21, 24, 0.9); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--dustloop-border);">
+        <div id="internal-tab-list" style="display: flex; gap: 6px; overflow-x: auto; flex: 1; align-items: center;"></div>
+        <div style="display: flex; gap: 4px; border-left: 1px solid var(--dustloop-border); padding-left: 8px;">
+            <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="createNewWorkspaceTab()" title="New Tab">➕ Tab</button>
+            <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="duplicateCurrentWorkspaceTab()" title="Duplicate Current Tab">⎘ Dup</button>
+            <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="toggleWorkspaceTabBarVisibility()" title="Toggle Tab Bar">👁️ Hide</button>
+        </div>
+    </div>
+    <button id="show-tabs-pill-btn" class="btn hidden" style="position: fixed; bottom: 15px; left: 15px; z-index: 1000; padding: 4px 10px; font-size: 11px;" onclick="toggleWorkspaceTabBarVisibility()">👁️ Show Tabs</button>
+
     <div id="browser-view" class="view-section">
         <header>
             <h1>ULTIMATE NOTES</h1>
@@ -448,8 +459,8 @@
                 <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px;">
                     <div>
                         <span style="font-weight:bold; color:#fff;">Engine Mode Toggle:</span>
-                        <button class="btn btn-shadow" id="master-autocomplete-toggle-btn" style="background:#2ecc71; color:white; border-color:#2ecc71; margin-left: 10px; padding: 4px 12px; font-size:11px;" onclick="toggleMasterAutocompleteState()">Autocomplete: ACTIVE</button>
-                        <button class="btn btn-shadow" id="auto-dict-append-toggle-btn" style="background:#2ecc71; color:white; border-color:#2ecc71; margin-left: 10px; padding: 4px 12px; font-size:11px;" onclick="toggleAutoDictAppendState()">Auto-Add To Dictionary: ON</button>
+                        <button class="btn btn-shadow" id="master-autocomplete-toggle-btn" style="background:#e74c3c; color:white; border-color:#e74c3c; margin-left: 10px; padding: 4px 12px; font-size:11px;" onclick="toggleMasterAutocompleteState()">Autocomplete: SILENCED</button>
+                        <button class="btn btn-shadow" id="auto-dict-append-toggle-btn" style="background:#e74c3c; color:white; border-color:#e74c3c; margin-left: 10px; padding: 4px 12px; font-size:11px;" onclick="toggleAutoDictAppendState()">Auto-Add To Dictionary: OFF</button>
                     </div>
                 </div>
                 <div class="help-title" onclick="toggleHelp()">
@@ -681,6 +692,7 @@
             }
         }
 
+        /* Nearest neighboring function: handleUserForgotPassword */
         function updateAuthPanelUI(user) {
             const headerControls = document.querySelector('header .controls');
             let authBox = document.getElementById('auth-status-container');
@@ -697,7 +709,6 @@
             if (user) {
                 authBox.innerHTML = `
                     <span style="font-size:12px; color:var(--text-dim); align-self:center;">👤 ${user.email}</span>
-                    <button class="btn btn-utility" style="padding:4px 10px; font-size:12px;" onclick="configureOptionalAccount2FA()">🔒 Setup 2FA</button>
                     <button class="btn btn-utility" style="padding:4px 10px; font-size:12px;" onclick="handleUserLogOut()">Sign Out</button>
                 `;
             } else {
@@ -980,9 +991,10 @@
             if (!item.gridColsCount) item.gridColsCount = 4;
 
             syncEditorInterfaceLayoutElementsState();
-            dynamicallyLearnedTokens.clear();
-            parseContextVocabulariesFromActiveFile(markdownInput.value);
+            // Do not clear dynamicallyLearnedTokens to ensure one global user dictionary persists across all files
             renderParsedHtmlStringIntoPreviewPane(markdownInput.value);
+            saveCurrentTabState();
+            renderWorkspaceTabs();
         }
 
         function closeEditor() {
@@ -1319,19 +1331,19 @@
             reader.readAsText(file);
         }
         
-        
-        
-        
         // --- EDITOR TEXT AREA HOOK INTERFACES ---
         function handleEditorInput(event) {
             const cursor = event.target.selectionStart;
             const val = event.target.value;
             const writtenText = val.slice(0, cursor - 1);
             const words = writtenText.split(/[\s\n]+/);
-            const finalWord = words[words.length - 1]?.replace(/[\[\]#\-.,!?;:]/g, '').trim();
+            
+            // Strips enclosing brackets/markdown characters while preserving periods inside tokens (e.g., "fox.", "j.2L", "dl.5H")
+            const finalWord = words[words.length - 1]?.replace(/[\[\]#\-,!?;:]/g, '').trim();
 
             if (activeFilePointer) {
                 activeFilePointer.content = val;
+                activeFilePointer.updated_at = Date.now();
             }
             renderParsedHtmlStringIntoPreviewPane(val);
             evaluateAutocompletePopupVisibilityEngine(event.target);
@@ -1410,6 +1422,26 @@
                 btn.style.background = "#e74c3c";
                 btn.style.borderColor = "#e74c3c";
             }
+        }
+
+        function updateAutoDictToggleButtonView() {
+            const btn = document.getElementById('auto-dict-append-toggle-btn');
+            if (!btn) return;
+            if (autoDictAppendEngineActive) {
+                btn.textContent = "Auto-Add To Dictionary: ON";
+                btn.style.background = "#2ecc71";
+                btn.style.borderColor = "#2ecc71";
+            } else {
+                btn.textContent = "Auto-Add To Dictionary: OFF";
+                btn.style.background = "#e74c3c";
+                btn.style.borderColor = "#e74c3c";
+            }
+        }
+
+        function toggleAutoDictAppendState() {
+            autoDictAppendEngineActive = !autoDictAppendEngineActive;
+            updateAutoDictToggleButtonView();
+            saveData();
         }
 
         function registerCustomVocabularyWordViaPanel() {
@@ -1791,6 +1823,9 @@
             navigationHistory = [appData.notebooks]; 
             renderGrid();
             updateHistoryControlButtonsState();
+            updateAutocompleteToggleButtonView();
+            updateAutoDictToggleButtonView();
+            renderWorkspaceTabs();
         }
 
         let cloudSyncTimer;
@@ -1817,16 +1852,47 @@
                 return;
             }
             
-            console.log("Auto-syncing data block to personal cloud storage...");
-            const { error } = await sb
-                .from('user_notes')
-                .upsert(
-                    { user_id: currentUserSession.id, data: appData },
-                    { onConflict: 'user_id' }
-                );
+            try {
+                // Fetch remote record first to check for concurrent tab/device modifications
+                const { data: remoteRecord } = await sb
+                    .from('user_notes')
+                    .select('data')
+                    .eq('user_id', currentUserSession.id)
+                    .maybeSingle();
 
-            if (error) console.error("Cloud sync failed:", error.message);
-            else console.log("Cloud sync complete.");
+                if (remoteRecord && remoteRecord.data && remoteRecord.data.notebooks) {
+                    const localTimestamp = appData.notebooks.updated_at || 0;
+                    const remoteTimestamp = remoteRecord.data.notebooks.updated_at || 0;
+
+                    if (remoteTimestamp > localTimestamp) {
+                        console.log("Remote state has more recent edits. Merging recent changes into workspace...");
+                        deepMergeNoteTrees(appData.notebooks, remoteRecord.data.notebooks);
+                        if (remoteRecord.data.userCustomDictionary) {
+                            remoteRecord.data.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));
+                        }
+                    } else {
+                        console.log("Local state has more recent edits. Merging local changes into remote...");
+                        deepMergeNoteTrees(remoteRecord.data.notebooks, appData.notebooks);
+                        appData.notebooks = remoteRecord.data.notebooks;
+                    }
+                }
+
+                appData.notebooks.updated_at = Date.now();
+                appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);
+                localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
+
+                const { error } = await sb
+                    .from('user_notes')
+                    .upsert(
+                        { user_id: currentUserSession.id, data: appData },
+                        { onConflict: 'user_id' }
+                    );
+
+                if (error) console.error("Cloud sync failed:", error.message);
+                else console.log("Cloud sync complete with recent edit priority.");
+            } catch (err) {
+                console.error("Conflict merge failure:", err.message);
+            }
         }
 
         function renderGrid() {
@@ -2248,50 +2314,148 @@
             previewPane.innerHTML = processedHtml;
         }
 
-        // Unified Session Presence Verification Hook
+        // --- MULTI-TAB WORKSPACE ENGINE ---
+        let workspaceTabs = [
+            { id: 'tab-default', name: 'Home', view: 'browser', activeFileId: null, navHistoryIds: ['root'] }
+        ];
+        let activeTabIndex = 0;
+        let isTabBarHidden = false;
+
+        function renderWorkspaceTabs() {
+            const tabList = document.getElementById('internal-tab-list');
+            if (!tabList) return;
+            tabList.innerHTML = '';
+
+            workspaceTabs.forEach((tab, index) => {
+                const tabEl = document.createElement('div');
+                const isActive = index === activeTabIndex;
+                tabEl.style.cssText = `display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; background:${isActive ? 'var(--accent-color)' : 'var(--panel-color)'}; color:${isActive ? 'var(--dustloop-dark)' : 'var(--text-color)'}; border:1px solid var(--dustloop-border); user-select:none;`;
+                
+                const titleSpan = document.createElement('span');
+                titleSpan.textContent = tab.name;
+                titleSpan.onclick = () => switchWorkspaceTab(index);
+
+                const closeBtn = document.createElement('span');
+                closeBtn.textContent = '✕';
+                closeBtn.style.cssText = 'font-size:10px; padding-left:4px; cursor:pointer;';
+                closeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    closeWorkspaceTab(index);
+                };
+
+                tabEl.appendChild(titleSpan);
+                if (workspaceTabs.length > 1) {
+                    tabEl.appendChild(closeBtn);
+                }
+                tabList.appendChild(tabEl);
+            });
+        }
+
+        function switchWorkspaceTab(targetIndex) {
+            if (!workspaceTabs[targetIndex]) return;
+            saveCurrentTabState();
+            activeTabIndex = targetIndex;
+            loadTabState(workspaceTabs[activeTabIndex]);
+            renderWorkspaceTabs();
+        }
+
+        function createNewWorkspaceTab() {
+            saveCurrentTabState();
+            const newTab = {
+                id: generateUniqueId(),
+                name: 'Home',
+                view: 'browser',
+                activeFileId: null,
+                navHistoryIds: ['root']
+            };
+            workspaceTabs.push(newTab);
+            activeTabIndex = workspaceTabs.length - 1;
+            loadTabState(newTab);
+            renderWorkspaceTabs();
+        }
+
+        function duplicateCurrentWorkspaceTab() {
+            saveCurrentTabState();
+            const current = workspaceTabs[activeTabIndex];
+            const duplicated = JSON.parse(JSON.stringify(current));
+            duplicated.id = generateUniqueId();
+            duplicated.name = 'Copy of ' + current.name;
+            workspaceTabs.push(duplicated);
+            activeTabIndex = workspaceTabs.length - 1;
+            loadTabState(duplicated);
+            renderWorkspaceTabs();
+        }
+
+        function closeWorkspaceTab(targetIndex) {
+            if (workspaceTabs.length <= 1) return;
+            workspaceTabs.splice(targetIndex, 1);
+            if (activeTabIndex >= workspaceTabs.length) {
+                activeTabIndex = workspaceTabs.length - 1;
+            }
+            loadTabState(workspaceTabs[activeTabIndex]);
+            renderWorkspaceTabs();
+        }
+
+        function toggleWorkspaceTabBarVisibility() {
+            const bar = document.getElementById('internal-tab-bar-container');
+            const pill = document.getElementById('show-tabs-pill-btn');
+            isTabBarHidden = !isTabBarHidden;
+            if (isTabBarHidden) {
+                bar.classList.add('hidden');
+                pill.classList.remove('hidden');
+            } else {
+                bar.classList.remove('hidden');
+                pill.classList.add('hidden');
+            }
+        }
+
+        function saveCurrentTabState() {
+            const cur = workspaceTabs[activeTabIndex];
+            if (!cur) return;
+            if (activeFilePointer) {
+                cur.view = 'editor';
+                cur.activeFileId = activeFilePointer.id;
+                cur.name = activeFilePointer.name;
+            } else {
+                cur.view = 'browser';
+                cur.activeFileId = null;
+                cur.name = getCurrentFolder().name;
+            }
+            cur.navHistoryIds = navigationHistory.map(n => n.id);
+        }
+
+        function loadTabState(tab) {
+            navigationHistory = tab.navHistoryIds
+                .map(id => findNodeInTreeById(appData.notebooks, id))
+                .filter(Boolean);
+
+            if (navigationHistory.length === 0) {
+                navigationHistory = [appData.notebooks];
+            }
+
+            if (tab.view === 'editor' && tab.activeFileId) {
+                const fileNode = findNodeInTreeById(appData.notebooks, tab.activeFileId);
+                if (fileNode) {
+                    openEditor(fileNode);
+                    return;
+                }
+            }
+            
+            if (activeFilePointer) {
+                closeEditor();
+            } else {
+                renderGrid();
+            }
+        }
+
+
+        // Unified Session Presence Verification Hook without 2FA intercept logic
         sb.auth.onAuthStateChange(async (event, session) => {
             currentUserSession = session ? session.user : null;
             updateAuthPanelUI(currentUserSession);
             
             if (event === 'SIGNED_IN') {
-                try {
-                    // Intercept login broadcast to inspect security assurance factor levels
-                    const { data: mfa, error: mfaErr } = await sb.auth.mfa.listFactors();
-                    const activeFactor = mfa?.all?.find(f => f.status === 'verified');
-                    
-                    // If the account has an active verified 2FA factor but the session is only AAL1
-                    if (!mfaErr && activeFactor && session.user.app_metadata.aal !== 'aal2') {
-                        const tokenCode = prompt("Enter your 6-digit 2FA verification code to access your workspace:");
-                        if (!tokenCode) {
-                            await sb.auth.signOut();
-                            return;
-                        }
-
-                        const { data: challenge, error: chErr } = await sb.auth.mfa.challenge({ factorId: activeFactor.id });
-                        if (chErr) {
-                            alert("Challenge Error: " + chErr.message);
-                            await sb.auth.signOut();
-                            return;
-                        }
-
-                        const { error: vErr } = await sb.auth.mfa.verify({ 
-                            challengeId: challenge.id, 
-                            code: tokenCode.trim() 
-                        });
-                        
-                        if (vErr) {
-                            alert("Invalid verification code sequence. Access denied.");
-                            await sb.auth.signOut();
-                            return;
-                        }
-                    }
-                    
-                    // Proceed to boot database structures once assurance requirements match
-                    initializeApp();
-                } catch (err) {
-                    console.error("Auth lifecycle intercept breakdown: ", err);
-                    await sb.auth.signOut();
-                }
+                initializeApp();
             }
         });
 
