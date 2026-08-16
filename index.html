@@ -332,17 +332,18 @@
         <button class="pwa-close-btn" onclick="dismissPwaNotice()">✖</button>
     </div>
 
+    
     <!-- Structural Context: Place immediately before #browser-view -->
     <div id="internal-tab-bar-container" style="display: flex; align-items: center; gap: 6px; margin-bottom: 12px; background: rgba(21, 21, 24, 0.9); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--dustloop-border);">
         <div id="internal-tab-list" style="display: flex; gap: 6px; overflow-x: auto; flex: 1; align-items: center;"></div>
         <div style="display: flex; gap: 4px; border-left: 1px solid var(--dustloop-border); padding-left: 8px;">
-            <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="createNewWorkspaceTab()" title="New Tab">➕ Tab</button>
-            <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="duplicateCurrentWorkspaceTab()" title="Duplicate Current Tab">⎘ Dup</button>
-            <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="toggleWorkspaceTabBarVisibility()" title="Toggle Tab Bar">👁️ Hide</button>
+            <a href="#" class="btn" style="text-decoration: none; display: inline-flex; align-items: center; padding: 4px 8px; font-size: 11px;" onclick="event.preventDefault(); createNewWorkspaceTab();" title="New Tab">➕ Tab</a>
+            <a href="#" class="btn" style="text-decoration: none; display: inline-flex; align-items: center; padding: 4px 8px; font-size: 11px;" onclick="event.preventDefault(); duplicateCurrentWorkspaceTab();" title="Duplicate Current Tab">⎘ Dup</a>
+            <a href="#" class="btn" style="text-decoration: none; display: inline-flex; align-items: center; padding: 4px 8px; font-size: 11px;" onclick="event.preventDefault(); toggleWorkspaceTabBarVisibility();" title="Toggle Tab Bar">👁️ Hide</a>
         </div>
     </div>
-    <button id="show-tabs-pill-btn" class="btn hidden" style="position: fixed; bottom: 15px; left: 15px; z-index: 1000; padding: 4px 10px; font-size: 11px;" onclick="toggleWorkspaceTabBarVisibility()">👁️ Show Tabs</button>
-
+    <a href="#" id="show-tabs-pill-btn" class="btn hidden" style="text-decoration: none; display: inline-flex; align-items: center; position: fixed; bottom: 15px; left: 15px; z-index: 1000; padding: 4px 10px; font-size: 11px;" onclick="event.preventDefault(); toggleWorkspaceTabBarVisibility();">👁️ Show Tabs</a>
+    
     <div id="browser-view" class="view-section">
         <header>
             <h1>ULTIMATE NOTES</h1>
@@ -2327,27 +2328,37 @@
             tabList.innerHTML = '';
 
             workspaceTabs.forEach((tab, index) => {
-                const tabEl = document.createElement('div');
                 const isActive = index === activeTabIndex;
-                tabEl.style.cssText = `display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; background:${isActive ? 'var(--accent-color)' : 'var(--panel-color)'}; color:${isActive ? 'var(--dustloop-dark)' : 'var(--text-color)'}; border:1px solid var(--dustloop-border); user-select:none;`;
                 
-                const titleSpan = document.createElement('span');
-                titleSpan.textContent = tab.name;
-                titleSpan.onclick = () => switchWorkspaceTab(index);
-
-                const closeBtn = document.createElement('span');
-                closeBtn.textContent = '✕';
-                closeBtn.style.cssText = 'font-size:10px; padding-left:4px; cursor:pointer;';
-                closeBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    closeWorkspaceTab(index);
+                // Render tab as an anchor link <a>
+                const tabLink = document.createElement('a');
+                tabLink.href = '#';
+                tabLink.style.cssText = `display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:4px; font-size:12px; font-weight:bold; cursor:pointer; text-decoration:none; background:${isActive ? 'var(--accent-color)' : 'var(--panel-color)'}; color:${isActive ? 'var(--dustloop-dark)' : 'var(--text-color)'}; border:1px solid var(--dustloop-border); user-select:none;`;
+                tabLink.onclick = (e) => {
+                    e.preventDefault();
+                    switchWorkspaceTab(index);
                 };
 
-                tabEl.appendChild(titleSpan);
+                const titleSpan = document.createElement('span');
+                titleSpan.textContent = tab.name;
+                tabLink.appendChild(titleSpan);
+
                 if (workspaceTabs.length > 1) {
-                    tabEl.appendChild(closeBtn);
+                    // Render close button as a distinct sub-link <a>
+                    const closeLink = document.createElement('a');
+                    closeLink.href = '#';
+                    closeLink.textContent = '✕';
+                    closeLink.title = 'Close Tab';
+                    closeLink.style.cssText = 'font-size:10px; padding-left:4px; cursor:pointer; text-decoration:none; color:inherit;';
+                    closeLink.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        closeWorkspaceTab(index);
+                    };
+                    tabLink.appendChild(closeLink);
                 }
-                tabList.appendChild(tabEl);
+
+                tabList.appendChild(tabLink);
             });
         }
 
