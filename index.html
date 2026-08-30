@@ -963,6 +963,8 @@
             if (!destinationFolder.children) destinationFolder.children = [];
             destinationFolder.children.push(movingItemPointer);
             
+            destinationFolder.updated_at = Date.now();
+            movingItemPointer.updated_at = Date.now();
             movingItemPointer = null;
             saveData();
             renderGrid();
@@ -1883,7 +1885,7 @@
             clearTimeout(cloudSyncTimer);
             await syncToCloud();
         }
-
+        
         async function syncToCloud() {
             if (!currentUserSession || !navigator.onLine) {
                 console.log("Sync skipped: Client offline or unauthenticated.");
@@ -1910,9 +1912,6 @@
                         if (remoteRecord.data.userCustomDictionary) {
                             remoteRecord.data.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));
                         }
-                    } else {
-                        console.log("Local state has more recent edits. Merging remote into local structure...");
-                        deepMergeNoteTrees(appData.notebooks, remoteRecord.data.notebooks);
                     }
                 }
 
