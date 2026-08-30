@@ -355,6 +355,8 @@
                 <!-- Global Workspace History Execution Triggers -->
                 <button class="btn btn-utility" id="history-undo-btn" onclick="executeUndoAction()" disabled>↶ Undo</button>
                 <button class="btn btn-utility" id="history-redo-btn" onclick="executeRedoAction()" disabled>↷ Redo</button>
+                <button class="btn btn-main" id="manual-save-btn" onclick="manualTriggerSaveData()" title="Save all local & cloud changes now">💾 Save</button>
+                <span id="save-status-indicator" style="font-size:12px; color:var(--text-dim); min-width:80px; text-align:center;">Saved</span>
                 <hr style="border:0; border-left:1px solid var(--dustloop-border); height:30px; margin:0 4px; align-self:center;">
                 
                 <button class="btn btn-utility" onclick="exportMetadata()">Export Data</button>
@@ -1832,6 +1834,9 @@
         let cloudSyncTimer;
 
         function saveData() {
+            if (appData.notebooks) {
+                appData.notebooks.updated_at = Date.now();
+            }
             appData.autocompleteWeightsLedger = autocompleteWeightsLedger; 
             appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens); 
             appData.autocompleteEngineActiveStatus = autocompleteEngineActiveStatus; 
@@ -1841,25 +1846,59 @@
             
             localStorage.setItem('ultimate_notes_data', JSON.stringify(appData)); 
 
+            updateSaveStatusIndicator('saving');
+
             clearTimeout(cloudSyncTimer);
             cloudSyncTimer = setTimeout(() => {
                 syncToCloud();
-            }, 2500);
+            }, 1000);
+        }
+
+        function updateSaveStatusIndicator(status) {
+            const indicator = document.getElementById('save-status-indicator');
+            if (!indicator) return;
+            if (status === 'saving') {
+                indicator.textContent = '⏳ Saving...';
+                indicator.style.color = 'var(--accent-color)';
+            } else if (status === 'saved') {
+                indicator.textContent = '✓ Saved';
+                indicator.style.color = '#2ecc71';
+            } else if (status === 'error') {
+                indicator.textContent = '⚠️ Save Error';
+                indicator.style.color = 'var(--danger-color)';
+            }
+        }
+        
+        async function manualTriggerSaveData() {
+            if (activeFilePointer) {
+                if (activeFilePointer.editorMode === 'text') {
+                    const inputEl = document.getElementById('markdown-input');
+                    if (inputEl) activeFilePointer.content = inputEl.value;
+                } else {
+                    activeFilePointer.content = generateMarkdownTableStringFromInfiniteGridCanvas();
+                }
+                activeFilePointer.updated_at = Date.now();
+            }
+            saveData();
+            clearTimeout(cloudSyncTimer);
+            await syncToCloud();
         }
 
         async function syncToCloud() {
             if (!currentUserSession || !navigator.onLine) {
                 console.log("Sync skipped: Client offline or unauthenticated.");
+                updateSaveStatusIndicator('saved');
                 return;
             }
             
             try {
-                // Fetch remote record first to check for concurrent tab/device modifications
-                const { data: remoteRecord } = await sb
+                const { data: remoteRecord, error: fetchErr } = await sb
                     .from('user_notes')
                     .select('data')
                     .eq('user_id', currentUserSession.id)
                     .maybeSingle();
+
+                if (fetchErr) throw fetchErr;
 
                 if (remoteRecord && remoteRecord.data && remoteRecord.data.notebooks) {
                     const localTimestamp = appData.notebooks.updated_at || 0;
@@ -1872,9 +1911,8 @@
                             remoteRecord.data.userCustomDictionary.forEach(token => dynamicallyLearnedTokens.add(token));
                         }
                     } else {
-                        console.log("Local state has more recent edits. Merging local changes into remote...");
-                        deepMergeNoteTrees(remoteRecord.data.notebooks, appData.notebooks);
-                        appData.notebooks = remoteRecord.data.notebooks;
+                        console.log("Local state has more recent edits. Merging remote into local structure...");
+                        deepMergeNoteTrees(appData.notebooks, remoteRecord.data.notebooks);
                     }
                 }
 
@@ -1882,17 +1920,23 @@
                 appData.userCustomDictionary = Array.from(dynamicallyLearnedTokens);
                 localStorage.setItem('ultimate_notes_data', JSON.stringify(appData));
 
-                const { error } = await sb
+                const { error: upsertErr } = await sb
                     .from('user_notes')
                     .upsert(
                         { user_id: currentUserSession.id, data: appData },
                         { onConflict: 'user_id' }
                     );
 
-                if (error) console.error("Cloud sync failed:", error.message);
-                else console.log("Cloud sync complete with recent edit priority.");
+                if (upsertErr) {
+                    console.error("Cloud sync failed:", upsertErr.message);
+                    updateSaveStatusIndicator('error');
+                } else {
+                    console.log("Cloud sync complete.");
+                    updateSaveStatusIndicator('saved');
+                }
             } catch (err) {
                 console.error("Conflict merge failure:", err.message);
+                updateSaveStatusIndicator('error');
             }
         }
 
