@@ -366,6 +366,7 @@
                 <button class="btn btn-utility" onclick="document.getElementById('bg-upload').click()">🖼️ BG Art</button>
                 
                 <button class="btn btn-paste" id="btn-paste" onclick="pasteItem()" style="display: none;">📋 Paste Here</button>
+                <button class="btn btn-utility" id="btn-cancel-move" onclick="cancelMoveItems()" style="display: none;">✖ Cancel Move</button>
                 <button class="btn btn-main" id="btn-folder" onclick="createNewItem('folder')">+ New Folder</button>
                 <button class="btn" id="btn-file" onclick="createNewItem('file')" style="display: none;">+ New File</button>
                 <button class="btn btn-main" id="btn-link-card" onclick="createNewItem('link')" style="display: none;">🔗 + New Link Card</button>
@@ -464,6 +465,7 @@
                         <span style="font-weight:bold; color:#fff;">Engine Mode Toggle:</span>
                         <button class="btn btn-shadow" id="master-autocomplete-toggle-btn" style="background:#e74c3c; color:white; border-color:#e74c3c; margin-left: 10px; padding: 4px 12px; font-size:11px;" onclick="toggleMasterAutocompleteState()">Autocomplete: SILENCED</button>
                         <button class="btn btn-shadow" id="auto-dict-append-toggle-btn" style="background:#e74c3c; color:white; border-color:#e74c3c; margin-left: 10px; padding: 4px 12px; font-size:11px;" onclick="toggleAutoDictAppendState()">Auto-Add To Dictionary: OFF</button>
+                        <button class="btn btn-shadow hidden" id="auto-dict-accept-toggle-btn" style="background:#e74c3c; color:white; border-color:#e74c3c; margin-left: 10px; padding: 4px 12px; font-size:11px;" onclick="toggleAutoDictAcceptState()">Auto-Accept: OFF</button>
                     </div>
                 </div>
                 <div class="help-title" onclick="toggleHelp()">
@@ -504,6 +506,8 @@
 
         let rawData = localStorage.getItem('ultimate_notes_data');
         let activeFilePointer = null; 
+        let movingItemsList = []; 
+        let autoDictAcceptEngineActive = false;
         let movingItemPointer = null; 
         let currentUserSession = null;
         let isAppInitialized = false; // Prevents race-condition dual execution loops
@@ -847,9 +851,6 @@
                 if (!url) return;
                 if (!/^https?:\/\//i.test(url)) url = "https://" + url;
                 newItem.url = url;
-            } else if (type === 'voice') {
-                newItem.audioBlobData = null;
-                newItem.transcription = "";
             }
 
             currentFolder.children.push(newItem);
@@ -926,7 +927,17 @@
 
         function startMoveItem(item, event) {
             if (event) event.stopPropagation();
-            movingItemPointer = item;
+            const existingIndex = movingItemsList.findIndex(i => i.id === item.id);
+            if (existingIndex > -1) {
+                movingItemsList.splice(existingIndex, 1);
+            } else {
+                movingItemsList.push(item);
+            }
+            renderGrid();
+        }
+
+        function cancelMoveItems() {
+            movingItemsList = [];
             renderGrid();
         }
 
@@ -946,26 +957,37 @@
         }
 
         function pasteItem() {
-            if (!movingItemPointer) return;
+            if (!movingItemsList.length) return;
             
             const destinationFolder = getCurrentFolder();
             
-            if (destinationFolder.id === movingItemPointer.id || isDestinationDescendantOfSource(movingItemPointer, destinationFolder.id)) {
+            // Filter out invalid destination moves
+            const validItemsToMove = movingItemsList.filter(item => {
+                if (destinationFolder.id === item.id || isDestinationDescendantOfSource(item, destinationFolder.id)) {
+                    return false;
+                }
+                return true;
+            });
+
+            if (validItemsToMove.length === 0) {
                 alert("Invalid migration logic loop: Node context nesting constraint collision.");
-                movingItemPointer = null;
+                movingItemsList = [];
                 renderGrid();
                 return;
             }
 
             pushGlobalStateSnapshot();
-            removeNodeFromTreeById(appData.notebooks, movingItemPointer.id);
-
-            if (!destinationFolder.children) destinationFolder.children = [];
-            destinationFolder.children.push(movingItemPointer);
             
+            if (!destinationFolder.children) destinationFolder.children = [];
+
+            validItemsToMove.forEach(item => {
+                removeNodeFromTreeById(appData.notebooks, item.id);
+                destinationFolder.children.push(item);
+                item.updated_at = Date.now();
+            });
+
             destinationFolder.updated_at = Date.now();
-            movingItemPointer.updated_at = Date.now();
-            movingItemPointer = null;
+            movingItemsList = [];
             saveData();
             renderGrid();
         }
@@ -1336,15 +1358,14 @@
             reader.readAsText(file);
         }
         
-        // --- EDITOR TEXT AREA HOOK INTERFACES ---
         function handleEditorInput(event) {
             const cursor = event.target.selectionStart;
             const val = event.target.value;
             const writtenText = val.slice(0, cursor - 1);
             const words = writtenText.split(/[\s\n]+/);
             
-            // Strips enclosing brackets/markdown characters while preserving periods inside tokens (e.g., "fox.", "j.2L", "dl.5H")
-            const finalWord = words[words.length - 1]?.replace(/[\[\]#\-,!?;:]/g, '').trim();
+            // Removed "!" from punctuation strip list so tokens ending with or containing "!" are recognized
+            const finalWord = words[words.length - 1]?.replace(/[\[\]#\-,?;:]/g, '').trim();
 
             if (activeFilePointer) {
                 activeFilePointer.content = val;
@@ -1358,12 +1379,17 @@
                     const pooledTokenList = Array.from(new Set([...baseFgcWords, ...dynamicallyLearnedTokens]));
                     const matchesWord = pooledTokenList.some(w => w.toLowerCase() === finalWord.toLowerCase());
                     if (!matchesWord) {
-                        setTimeout(() => {
-                            if (confirm(`Add custom token variant reference "${finalWord}" into the Autocomplete dictionary?`)) {
-                                dynamicallyLearnedTokens.add(finalWord);
-                                saveData();
-                            }
-                        }, 200);
+                        if (autoDictAcceptEngineActive) {
+                            dynamicallyLearnedTokens.add(finalWord);
+                            saveData();
+                        } else {
+                            setTimeout(() => {
+                                if (confirm(`Add custom token variant reference "${finalWord}" into the Autocomplete dictionary?`)) {
+                                    dynamicallyLearnedTokens.add(finalWord);
+                                    saveData();
+                                }
+                            }, 200);
+                        }
                     }
                 }
             }
@@ -1414,19 +1440,54 @@
 
         let autoDictAppendEngineActive = false;
 
+        function updateAutoDictToggleButtonView() {
+            const addBtn = document.getElementById('auto-dict-append-toggle-btn');
+            const acceptBtn = document.getElementById('auto-dict-accept-toggle-btn');
+            
+            if (addBtn) {
+                if (autoDictAppendEngineActive) {
+                    addBtn.textContent = "Auto-Add To Dictionary: ON";
+                    addBtn.style.background = "#2ecc71";
+                    addBtn.style.borderColor = "#2ecc71";
+                } else {
+                    addBtn.textContent = "Auto-Add To Dictionary: OFF";
+                    addBtn.style.background = "#e74c3c";
+                    addBtn.style.borderColor = "#e74c3c";
+                }
+            }
+
+            if (acceptBtn) {
+                if (autoDictAppendEngineActive) {
+                    acceptBtn.classList.remove('hidden');
+                    if (autoDictAcceptEngineActive) {
+                        acceptBtn.textContent = "Auto-Accept: ON";
+                        acceptBtn.style.background = "#2ecc71";
+                        acceptBtn.style.borderColor = "#2ecc71";
+                    } else {
+                        acceptBtn.textContent = "Auto-Accept: OFF";
+                        acceptBtn.style.background = "#e74c3c";
+                        acceptBtn.style.borderColor = "#e74c3c";
+                    }
+                } else {
+                    acceptBtn.classList.add('hidden');
+                    autoDictAcceptEngineActive = false;
+                }
+            }
+        }
+
         function toggleAutoDictAppendState() {
             autoDictAppendEngineActive = !autoDictAppendEngineActive;
-            const btn = document.getElementById('auto-dict-append-toggle-btn');
-            if (!btn) return;
-            if (autoDictAppendEngineActive) {
-                btn.textContent = "Auto-Add To Dictionary: ON";
-                btn.style.background = "#2ecc71";
-                btn.style.borderColor = "#2ecc71";
-            } else {
-                btn.textContent = "Auto-Add To Dictionary: OFF";
-                btn.style.background = "#e74c3c";
-                btn.style.borderColor = "#e74c3c";
+            if (!autoDictAppendEngineActive) {
+                autoDictAcceptEngineActive = false;
             }
+            updateAutoDictToggleButtonView();
+            saveData();
+        }
+
+        function toggleAutoDictAcceptState() {
+            autoDictAcceptEngineActive = !autoDictAcceptEngineActive;
+            updateAutoDictToggleButtonView();
+            saveData();
         }
 
         function updateAutoDictToggleButtonView() {
@@ -1954,8 +2015,15 @@
             }
 
             const pasteBtn = document.getElementById('btn-paste');
+            const cancelMoveBtn = document.getElementById('btn-cancel-move');
             if (pasteBtn) {
-                pasteBtn.style.display = movingItemPointer ? 'inline-block' : 'none';
+                pasteBtn.style.display = movingItemsList.length > 0 ? 'inline-block' : 'none';
+                if (movingItemsList.length > 0) {
+                    pasteBtn.textContent = `📋 Paste Here (${movingItemsList.length})`;
+                }
+            }
+            if (cancelMoveBtn) {
+                cancelMoveBtn.style.display = movingItemsList.length > 0 ? 'inline-block' : 'none';
             }
 
             const breadcrumbsContainer = document.getElementById('breadcrumbs');
@@ -2005,10 +2073,11 @@
                     btnMov.textContent = '⬈';
                     btnMov.title = 'Move Item';
                     btnMov.onclick = (e) => startMoveItem(item, e);
-
-                    const card = document.createElement('button');
-                    card.className = `grid-item ${movingItemPointer && movingItemPointer.id === item.id ? 'moving' : ''}`;
                     
+                    const isItemMoving = movingItemsList.some(i => i.id === item.id);
+                    const card = document.createElement('button');
+                    card.className = `grid-item ${isItemMoving ? 'moving' : ''}`;
+
                     let itemIcon = '📁';
                     let iconClass = 'folder-icon';
                     if (item.type === 'file') { itemIcon = '📄'; iconClass = 'file-icon'; }
@@ -2047,6 +2116,7 @@
         let activeVoiceRecordingStream = null;
         let voiceRecordingMediaBuffer = [];
         let activeVoicePlaybackElement = null;
+        let globalAudioSpectrumAnimationId = null;
 
         function openVoiceNoteInterface(item) {
             let overlay = document.getElementById('voice-note-modal-overlay');
@@ -2080,28 +2150,20 @@
                         <canvas id="audio-spectrum-canvas" width="400" height="45" style="background:#0c0c0e; border:1px solid var(--dustloop-border); border-radius:4px; margin-top:5px; width:100%;"></canvas>
                     </div>
 
-                    <div style="display:flex; gap:10px; justify-content:center; margin-bottom:20px;">
+                    <div style="display:flex; gap:10px; justify-content:center; margin-bottom:10px;">
                         <button class="btn btn-main" id="btn-start-voice" onclick="startVoiceRecordingEngine()">Record</button>
                         <button class="btn" id="btn-stop-voice" style="background:var(--danger-color); border-color:var(--danger-color);" onclick="stopVoiceRecordingEngine('${item.id}')" disabled>Stop</button>
                         <button class="btn" id="btn-play-voice" style="border-color:#2ecc71; color:#2ecc71;" onclick="playbackVoiceNoteAsset('${item.id}')" ${item.audioBlobData ? '' : 'disabled'}>Play Sound</button>
                     </div>
-
-                    <div style="background:#0c0c0e; border:1px solid var(--dustloop-border); padding:15px; border-radius:6px; min-height:80px; text-align:left; max-height:200px; overflow-y:auto; cursor:pointer;" onclick="viewFullVoiceTranscription('${item.id}')" title="Click to view full transcription file layout">
-                        <span style="font-size:11px; color:var(--accent-color); font-weight:bold; display:block; margin-bottom:4px;">AUTO TRANSCRIPTION DIALOGUE FEED (CLICK TO OPEN):</span>
-                        <p id="voice-transcription-pane" style="margin:0; font-size:14px; color:#fff; line-height:1.4; text-decoration:underline;">${item.transcription || 'No audio transcription dataset exists yet.'}</p>
-                    </div>
                 </div>
             `;
         }
-
-        let globalAudioSpectrumAnimationId = null;
 
         function startVoiceRecordingEngine() {
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
                 activeVoiceRecordingStream = new MediaRecorder(stream);
                 voiceRecordingMediaBuffer = [];
                 
-                // Setup Live Web Audio API Context Analyzer
                 const AudioCtx = window.AudioContext || window.webkitAudioContext;
                 const context = new AudioCtx();
                 const source = context.createMediaStreamSource(stream);
@@ -2130,33 +2192,12 @@
                     for (let i = 0; i < dataArray.length; i++) {
                         const v = dataArray[i] / 128.0;
                         const y = (v * canvas.height) / 2;
-                        
                         if (i === 0) ctx.moveTo(x, y);
                         else ctx.lineTo(x, y);
-                        
                         x += sliceWidth;
                     }
                     ctx.lineTo(canvas.width, canvas.height / 2);
                     ctx.stroke();
-                }
-                
-                // Start Speech Recognition Layer Integration
-                const SpeechEngine = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (SpeechEngine) {
-                    window.activeRecognitionInstance = new SpeechEngine();
-                    window.activeRecognitionInstance.continuous = true;
-                    window.activeRecognitionInstance.interimResults = false;
-                    window.activeRecognitionInstance.lang = 'en-US';
-                    window.capturedSpeechTranscriptString = "";
-                    
-                    window.activeRecognitionInstance.onresult = (event) => {
-                        let segment = "";
-                        for (let i = event.resultIndex; i < event.results.length; ++i) {
-                            if (event.results[i].isFinal) segment += event.results[i][0].transcript;
-                        }
-                        window.capturedSpeechTranscriptString += segment;
-                    };
-                    window.activeRecognitionInstance.start();
                 }
                 
                 activeVoiceRecordingStream.ondataavailable = (e) => {
@@ -2180,10 +2221,6 @@
             
             cancelAnimationFrame(globalAudioSpectrumAnimationId);
             
-            if (window.activeRecognitionInstance) {
-                window.activeRecognitionInstance.stop();
-            }
-            
             activeVoiceRecordingStream.onstop = () => {
                 const audioBlob = new Blob(voiceRecordingMediaBuffer, { type: 'audio/mp3' });
                 const currentFolder = getCurrentFolder();
@@ -2194,11 +2231,6 @@
                     reader.onload = function(e) {
                         pushGlobalStateSnapshot();
                         voiceNode.audioBlobData = e.target.result;
-                        
-                        // Assign translated text, fallback if no sound was processed
-                        voiceNode.transcription = window.capturedSpeechTranscriptString?.trim() || "No audio text processed during this session window.";
-                        
-                        document.getElementById('voice-transcription-pane').textContent = voiceNode.transcription;
                         document.getElementById('btn-play-voice').disabled = false;
                         saveData();
                     };
@@ -2225,35 +2257,6 @@
                 activeVoicePlaybackElement = new Audio(voiceNode.audioBlobData);
                 activeVoicePlaybackElement.play();
             }
-        }
-
-        /* Nearest neighboring function: viewFullVoiceTranscription */
-        function viewFullVoiceTranscription(id) {
-            const currentFolder = getCurrentFolder();
-            let voiceNode = currentFolder.children.find(c => c.id === id);
-            if (!voiceNode || !voiceNode.transcription) return;
-
-            let modal = document.createElement('div');
-            modal.id = 'full-transcription-modal-overlay';
-            modal.style.position = 'fixed';
-            modal.style.top = '0';
-            modal.style.left = '0';
-            modal.style.width = '100vw';
-            modal.style.height = '100vh';
-            modal.style.background = 'var(--bg-color)';
-            modal.style.zIndex = '10001';
-            modal.style.padding = '30px';
-            modal.style.boxSizing = 'border-box';
-            modal.style.overflowY = 'auto';
-
-            modal.innerHTML = `
-                <div style="max-width:800px; margin:0 auto; background:var(--panel-color); border:2px solid var(--dustloop-border); padding:30px; border-radius:6px; position:relative;">
-                    <button onclick="document.getElementById('full-transcription-modal-overlay').remove()" class="btn" style="position:absolute; top:20px; right:20px; background:var(--danger-color); border-color:var(--danger-color); color:white;">Close File View</button>
-                    <h2 style="color:var(--accent-color); border-bottom:2px solid var(--accent-color); padding-bottom:10px; margin-top:0;">📝 Full Transcription Markdown Layout</h2>
-                    <div class="preview-pane" style="background:transparent; border:none; padding:20px 0; color:var(--text-color); font-size:16px; line-height:1.6; white-space:pre-wrap;">${voiceNode.transcription}</div>
-                </div>
-            `;
-            document.body.appendChild(modal);
         }
 
         function enterFolder(folder) {
