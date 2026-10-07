@@ -1364,8 +1364,8 @@
             const writtenText = val.slice(0, cursor - 1);
             const words = writtenText.split(/[\s\n]+/);
             
-            // Removed "!" from punctuation strip list so tokens ending with or containing "!" are recognized
-            const finalWord = words[words.length - 1]?.replace(/[\[\]#\-,?;:]/g, '').trim();
+            // Removed "," and ":" from character strip list to retain punctuation in dictionary tokens
+            const finalWord = words[words.length - 1]?.replace(/[\[\]#\-?;]/g, '').trim();
 
             if (activeFilePointer) {
                 activeFilePointer.content = val;
@@ -2334,7 +2334,7 @@
                 } else if (/^##\s(.*$)/.test(line)) {
                     processedHtml += `<h2>${line.replace(/^##\s/, '')}</h2>`;
                 } else if (/^###\s(.*$)/.test(line)) {
-                    processedHtml += `<h2>${line.replace(/^###\s/, '')}</h2>`;
+                    processedHtml += `<h3>${line.replace(/^###\s/, '')}</h3>`;
                 } else if (line.trim() !== "") {
                     processedHtml += `${line}<br>`;
                 } else {
