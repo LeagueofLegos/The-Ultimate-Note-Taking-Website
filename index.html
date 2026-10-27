@@ -1047,8 +1047,19 @@
             if (!activeFilePointer) return;
             
             if (activeFilePointer.editorMode === 'text') {
+                const markdownInput = document.getElementById('markdown-input');
+                if (markdownInput) {
+                    activeFilePointer.content = markdownInput.value;
+                }
+                parseMarkdownTableStringIntoInfiniteGridCanvas(activeFilePointer.content || "");
                 activeFilePointer.editorMode = 'grid';
             } else {
+                activeFilePointer.content = generateMarkdownTableStringFromInfiniteGridCanvas();
+                const markdownInput = document.getElementById('markdown-input');
+                if (markdownInput) {
+                    markdownInput.value = activeFilePointer.content;
+                    renderParsedHtmlStringIntoPreviewPane(activeFilePointer.content);
+                }
                 activeFilePointer.editorMode = 'text';
             }
             syncEditorInterfaceLayoutElementsState();
@@ -2336,7 +2347,7 @@
                 } else if (/^###\s(.*$)/.test(line)) {
                     processedHtml += `<h3>${line.replace(/^###\s/, '')}</h3>`;
                 } else if (line.trim() !== "") {
-                    processedHtml += `${line}<br>`;
+                    processedHtml += `${line}<br>`; 
                 } else {
                     processedHtml += "<br>";
                 }
