@@ -389,7 +389,7 @@
         <header>
             <h1 id="editor-file-title">Editing File</h1>
             <div class="controls">
-                <button class="btn btn-main" id="toggle-editor-mode-btn" style="border-color: var(--accent-color); color: var(--accent-color);" onclick="switchLeftPaneEditorMode()">📊 Toggle Editor to Sheets Grid</button>
+                <button class="btn btn-main" id="toggle-editor-mode-btn" style="border-color: var(--accent-color); color: var(--accent-color);" onclick="switchLeftPaneEditorMode()">📊 Toggle Grid</button>
                 <button class="btn btn-main" style="border-color: var(--accent-color); color: var(--accent-color);" onclick="displayContextualHelpModal()">Markdown Shortcuts</button>
                 <button class="btn btn-main" style="border-color:#2196f3; color:#2196f3;" onclick="toggleLabVideoPlayer()">🎬 Toggle Lab Video Player</button>
                 <button class="btn btn-main" onclick="closeEditor()">Save & Exit</button>
@@ -1047,19 +1047,8 @@
             if (!activeFilePointer) return;
             
             if (activeFilePointer.editorMode === 'text') {
-                const markdownInput = document.getElementById('markdown-input');
-                if (markdownInput) {
-                    activeFilePointer.content = markdownInput.value;
-                }
-                parseMarkdownTableStringIntoInfiniteGridCanvas(activeFilePointer.content || "");
                 activeFilePointer.editorMode = 'grid';
-            } else {
-                activeFilePointer.content = generateMarkdownTableStringFromInfiniteGridCanvas();
-                const markdownInput = document.getElementById('markdown-input');
-                if (markdownInput) {
-                    markdownInput.value = activeFilePointer.content;
-                    renderParsedHtmlStringIntoPreviewPane(activeFilePointer.content);
-                }
+            } else { 
                 activeFilePointer.editorMode = 'text';
             }
             syncEditorInterfaceLayoutElementsState();
@@ -1073,12 +1062,12 @@
             if (activeFilePointer.editorMode === 'grid') {
                 txtWrapper.classList.add('hidden');
                 gridWrapper.classList.remove('hidden');
-                modeToggleBtn.textContent = "📝 Toggle Editor to Raw Text Engine";
+                modeToggleBtn.textContent = "📝 Toggle Text Editor";
                 renderInfiniteCanvasMatrixInputsElementsGrid();
             } else {
                 gridWrapper.classList.add('hidden');
                 txtWrapper.classList.remove('hidden');
-                modeToggleBtn.textContent = "📊 Toggle Editor to Sheets Grid";
+                modeToggleBtn.textContent = "📊 Toggle Grid";
             }
         }
 
